@@ -5,6 +5,7 @@ import InstallPrompt from './components/InstallPrompt'
 import LocalAnestheticCalc from './components/LocalAnestheticCalc'
 import PatientCard from './components/PatientCard'
 import RelaxantTimers from './components/RelaxantTimers'
+import QuickInfo from './components/QuickInfo'
 
 export default function App() {
   return (
@@ -36,8 +37,13 @@ export default function App() {
       <main className="flex-1">
         <section className="max-w-3xl mx-auto p-4">
           <div className="grid gap-4">
+            {/* Patient summary */}
             <PatientCard />
 
+            {/* Quick Info (sizes, fluids, EBV) */}
+            <QuickInfo />
+
+            {/* Surgical Timer */}
             <div className="rounded-2xl border bg-white shadow-sm">
               <div className="p-4 border-b flex items-center gap-2">
                 <TimerReset className="w-5 h-5 text-blue-600" />
@@ -48,8 +54,10 @@ export default function App() {
               </div>
             </div>
 
+            {/* Relaxant Timers */}
             <RelaxantTimers />
 
+            {/* Local anesthetic calculator */}
             <div className="rounded-2xl border bg-white shadow-sm">
               <div className="p-4 border-b flex items-center gap-2">
                 <Syringe className="w-5 h-5 text-blue-600" />
@@ -65,7 +73,7 @@ export default function App() {
 
       <footer className="border-t bg-white">
         <div className="max-w-3xl mx-auto px-4 py-3 text-xs text-gray-500">
-          v0.2 • Data is stored locally on your device.
+          v0.3 • Data is stored locally on your device. Use clinical judgement & local policy.
         </div>
       </footer>
     </div>
