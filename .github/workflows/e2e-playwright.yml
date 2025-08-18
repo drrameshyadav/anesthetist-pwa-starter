@@ -1,0 +1,59 @@
+name: e2e (Playwright on Netlify Preview)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Wait for the Netlify Deploy Preview URL of this PR
+      - name: Wait for Netlify Deploy Preview
+        id: wait
+        uses: jakepartusch/wait-for-netlify-action@v1.4
+        with:
+          site_name: "anesthesiacalculations"   # your Netlify subdomain (before .netlify.app)
+          max_timeout: 600
+
+      - name: Resolve Preview URL (with fallback)
+        id: preview
+        run: |
+          URL="${{ steps.wait.outputs.url }}"
+          if [ -z "$URL" ]; then
+            echo "No URL from wait step, constructing fallback…"
+            echo "url=https://deploy-preview-${{ github.event.number }}--anesthesiacalculations.netlify.app/" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=$URL" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Using preview URL: $(cat $GITHUB_OUTPUT)"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright
+        run: |
+          npm install -D @playwright/test
+          npx playwright install --with-deps chromium
+
+      - name: Run Playwright (Chromium)
+        env:
+          BASE_URL: ${{ steps.preview.outputs.url }}
+        run: npx playwright test --config=playwright.config.ts
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
