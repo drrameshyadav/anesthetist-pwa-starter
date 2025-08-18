@@ -21,6 +21,7 @@ jobs:
 
   e2e:
     # optional: wait for build job to finish (not strictly required)
+    if: contains(github.event.pull_request.title, '[e2e]')
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
