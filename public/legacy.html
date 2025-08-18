@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Anesthesia Toolkit — S23 (v1.3.6)</title>
+<style>
+  :root{
+    --bg:#f7fafc; --card:#ffffff; --muted:#4b5563; --text:#0b1320; --accent:#2563eb;
+    --accent-weak:#dde7ff; --border:#e5e7eb; --warn:#a16207; --warn-bg:#fff6d7;
+    --ok:#065f46; --okbg:#d1fae5; --danger:#991b1b; --dangerbg:#fee2e2; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 16px rgba(0,0,0,.06);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial;
+       font-size: clamp(15px, 1.9vh, 17px); line-height:1.35;}
+  .container{max-width:1100px;margin:0 auto;padding:12px 12px 120px 12px;}
+  h1{margin:8px 0 0;font-size:clamp(20px,2.8vh,26px)}
+  .note{display:flex;gap:8px;align-items:center;background:var(--warn-bg);color:var(--warn);
+        border:1px solid var(--border);padding:8px 10px;border-radius:12px;font-size:0.92em;box-shadow:var(--shadow)}
+  .toolbar{position:static;top:auto;z-index:8;background:var(--bg);padding:6px 0}
+  .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  label{display:block;font-size:0.85em;color:var(--muted);margin-bottom:4px}
+  input,select,button,textarea{
+    width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:#fff;color:var(--text);outline:none;
+    min-height:48px;font-size:1em;
+  }
+  button{background:var(--accent);color:#fff;border:none;box-shadow:var(--shadow);}
+  button.secondary{background:#eef2ff;color:#1f2a6b;border:1px solid var(--border)}
+  button.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+  button.warn{background:#f59e0b;color:#1f1600}
+  button.danger{background:#ef4444;color:#fff}
+  .row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.row>div{flex:1;min-width:140px}
+  .pill{background:#f3f4f6;border:1px solid var(--border);padding:8px 10px;border-radius:12px;font-size:0.95em}
+  .summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  @media(min-width:700px){.summary{grid-template-columns:repeat(6,minmax(0,1fr))}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+  .card .hd{padding:10px 14px;border-bottom:1px solid var(--border);font-weight:700;font-size:1em}
+  .card .bd{padding:16px;overflow-wrap:anywhere}
+  .grid2{display:grid;gap:12px}@media(min-width:860px){.grid2{grid-template-columns:1fr 1fr}}
+  .item{background:#f9fafb;border:1px solid var(--border);border-radius:12px;padding:10px 12px}
+  .small{font-size:0.85em;color:var(--muted)}
+  .sep{height:1px;background:var(--border);margin:8px 0}
+  .warnbox{background:var(--warn-bg);color:var(--warn);border:1px solid var(--border);padding:8px 10px;border-radius:10px;font-size:0.9em}
+  .okbox{background:var(--okbg);color:var(--ok);border:1px solid var(--border);padding:8px 10px;border-radius:10px;font-size:0.9em}
+  details.section{margin-top:12px;border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);overflow:hidden;position:relative}
+details.section>summary{display:block;cursor:pointer;list-style:none;padding:12px 16px;font-weight:700;border-radius:14px 14px 0 0;margin:0;background:var(--card)}
+details.section>summary::-webkit-details-marker{display:none}
+details.section[open] summary{border-bottom:1px solid var(--border);border-bottom-left-radius:0;border-bottom-right-radius:0}
+details.section>.bd{margin:0;background:var(--card);padding:16px}
+  details.section>summary{cursor:pointer;list-style:none;padding:12px 16px;font-weight:700;border-radius:14px}
+  details.section[open] summary{border-bottom:1px solid var(--border)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--border);font-size:0.75em;margin-left:6px}
+  .progress{height:10px;border-radius:999px;background:var(--accent-weak);overflow:hidden}
+  .progress>div{height:100%;background:var(--accent);width:0%}
+  .timer-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .timer-row > *{flex:1;min-width:120px}
+  .timebig{font-variant-numeric:tabular-nums;font-size:1.15em}
+  /* Bottom nav: horizontally scrollable, passes vertical scroll through */
+  .botnav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--border);
+          display:flex;gap:6px;padding:6px 8px;z-index:9;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;scroll-behavior:smooth}
+  .botnav::before,.botnav::after{content:"";position:sticky;top:0;display:block;width:10px;flex:0 0 10px}
+  .botnav::before{left:0;background:linear-gradient(to right, rgba(255,255,255,0.9), rgba(255,255,255,0))}
+  .botnav::after{right:0;background:linear-gradient(to left, rgba(255,255,255,0.9), rgba(255,255,255,0))}
+  .botnav button{width:auto !important;flex:0 0 auto;white-space:nowrap;min-width:84px;min-height:40px;padding:8px 12px;font-size:0.95em}
+  .botnav button{flex:0 0 auto;min-width:100px;min-height:44px;background:#eef2ff;color:#1f2a6b}
+  @supports(padding:max(0px)){ .container{padding-bottom:calc(120px + env(safe-area-inset-bottom));} .botnav{padding-bottom:calc(8px + env(safe-area-inset-bottom));} }
+  @media(prefers-reduced-motion:reduce){ *{animation:none !important; transition:none !important;} }
+
+/* tidy info text blocks inside sections */
+details.section>.bd > .muted:first-child,
+details.section>.bd > .info:first-child,
+details.section>.bd > .lead:first-child{
+  display:block;
+  background:rgba(0,0,0,0.03);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:10px 14px;
+  margin:8px 0 12px;
+}
+
+
+/* --- Compact mobile gutters for small phones (e.g., S23 in portrait) --- */
+@media (max-width: 420px){
+  .page{ padding-left:8px; padding-right:8px; }
+  .card, details.section{ margin-left:0; margin-right:0; border-radius:12px; }
+  .card .bd, details.section>.bd{ padding:14px; }
+  .pill, .warnbox, .lead, .info, .muted{ margin-left:0; margin-right:0; }
+}
+
+
+/* --- Ultra-compact gutters for very small screens --- */
+@media (max-width: 420px){
+  .container{ padding-left:2px; padding-right:2px; }
+  .page{ padding-left:2px; padding-right:2px; }
+  .card, details.section{ margin-left:0; margin-right:0; border-radius:10px; }
+  .card .bd, details.section>.bd{ padding:14px; }
+}
+
+
+/* Wider pills on small screens */
+@media (max-width: 420px){
+  .pill{display:block;margin-left:-8px;margin-right:-8px;padding-left:14px;padding-right:14px}
+  .warnbox{display:block;margin-left:-6px;margin-right:-6px}
+}
+
+
+/* Extra breathing room under summary tiles (prevents visual overlap with card edge) */
+.summary{margin-bottom:10px}
+
+
+/* Narrower inner cards inside syringe lists on small screens */
+@media (max-width: 420px){
+  #sec-adults .grid2 .item,
+  #sec-peds .grid2 .item{
+    margin-left:8px;
+    margin-right:8px;
+  }
+}
+
+
+/* Prevent overlap look between selects and summary tiles on small screens */
+@media (max-width: 420px){
+  .summary{ margin-top:14px !important; margin-bottom:14px !important; gap:12px !important; }
+  /* add a little breathing room under any select directly before summary */
+  #weightBasis{ margin-bottom:6px; }
+}
+
+
+/* ===== Ultra-compact layout v1.3.24 ===== */
+@media (max-width: 420px){
+  /* Minimal outer gutters */
+  .container{ padding-left:1px; padding-right:1px; }
+  .page{ padding-left:1px; padding-right:1px; }
+
+  /* Cards full width with tight radius */
+  .card, details.section{ margin-left:0; margin-right:0; border-radius:10px; }
+
+  /* Minimal left/right padding inside sections */
+  .card .bd, details.section>.bd{ padding-left:10px; padding-right:10px; }
+
+  /* Inner drug cards: remove side margins so they widen */
+  #sec-adults .grid2 .item,
+  #sec-peds .grid2 .item{ margin-left:0; margin-right:0; }
+
+  /* Headline/info blocks use minimal side margins */
+  .lead, .info, .muted{ margin-left:0; margin-right:0; }
+
+  /* Pills and warnings extend almost edge-to-edge */
+  .pill{ display:block; margin-left:-10px; margin-right:-10px; padding-left:12px; padding-right:12px; }
+  .warnbox{ display:block; margin-left:-8px; margin-right:-8px; }
+}
+
+
+/* Summary tiles: enforce row/column gap so rounded corners never touch */
+.summary{ gap:10px !important; }
+.summary .tile{ background-clip:padding-box; box-sizing:border-box; }
+
+
+/* Infusions list styling safeguard */
+#inf_list .item{ background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; margin:8px 0; }
+
+
+/* Stronger tile separation to avoid any rounded-corner overlap on phones */
+@media (max-width: 420px){
+  .summary{ grid-column-gap:14px !important; grid-row-gap:14px !important; }
+  .summary .tile{ background-clip:padding-box; box-sizing:border-box; }
+}
+
+
+/* Single-column summary tiles on narrow phones to avoid any rounded-corner overlap */
+@media (max-width: 420px){
+  .summary{ grid-template-columns: 1fr !important; gap:12px !important; }
+}
+
+</style>
+</head>
+<body>
+<div class="container" id="root">
+  <div class="toolbar">
+    <div class="topbar">
+      <h1>Anesthesia Toolkit — S23</h1>
+      <div class="controls">
+        <label style="display:flex;align-items:center;gap:6px;margin:0">Region
+          <select id="region" style="min-height:auto"><option value="global">Global</option><option value="india">India</option></select>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:6px">⚠️ <div><b>Safety:</b> For trained anesthesia professionals. Verify doses/recipes with your protocol and labels. IBW/LBW used where recommended.</div></div>
+
+  <div class="card" style="margin-top:10px">
+    <div class="hd">Patient</div>
+    <div class="bd">
+      <div class="row">
+        <div><label>Age (years)</label><input id="age" inputmode="decimal" placeholder="e.g., 7"/></div>
+        <div><label>Weight (kg)</label><input id="weight" inputmode="decimal" placeholder="kg"/></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div id="h_cm_wrap"><label>Height</label><input id="height_cm" inputmode="decimal" placeholder="cm"/></div>
+        <div id="h_in_wrap" style="display:none"><label>Height</label><input id="height_in" inputmode="decimal" placeholder="inches"/></div>
+        <div id="h_ftin_wrap" style="display:none">
+          <label>Height</label>
+          <div class="row" style="gap:6px">
+            <div style="flex:1 1 80px"><input id="height_ft" inputmode="decimal" placeholder="ft"/></div>
+            <div style="flex:1 1 80px"><input id="height_in2" inputmode="decimal" placeholder="in"/></div>
+          </div>
+        </div>
+        <div style="flex:0 0 160px">
+          <label>&nbsp;</label>
+          <select id="height_unit">
+            <option value="cm">cm</option>
+            <option value="in">in</option>
+            <option value="ftin">ft+in</option>
+          </select>
+        </div>
+        <div><label>Sex</label><select id="sex"><option value="male">Male</option><option value="female">Female</option></select></div>
+        <div><label>Weight for dosing</label><select id="weightBasis">
+          <option value="AUTO">Recommended (per drug)</option>
+          <option value="TBW">TBW</option>
+          <option value="IBW">IBW</option>
+          <option value="LBW">LBW</option>
+        </select></div>
+      </div>
+      <div class="summary" style="margin-top:10px">
+        <div class="pill"><div class="small">TBW</div><div id="sum_tbw">-</div></div>
+        <div class="pill"><div class="small">IBW (Devine)</div><div id="sum_ibw">-</div></div>
+        <div class="pill"><div class="small">LBW (Janma)</div><div id="sum_lbw">-</div></div>
+        <div class="pill"><div class="small">BMI</div><div id="sum_bmi">-</div></div>
+        <div class="pill"><div class="small">BSA (Mosteller)</div><div id="sum_bsa">-</div></div>
+        <div class="pill"><div class="small">Age</div><div id="sum_age">-</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Relaxant timers -->
+  <details id="sec-timers" class="section" open>
+    <summary>Relaxant Timers (smart)</summary>
+    <div class="bd">
+      <div class="small">Timers persist if you reload. They buzz at suggested windows; adjust to your protocol and TOF — these are <b>reminders only</b>, not clinical endpoints.</div>
+      <div class="item" style="margin-top:10px">
+        <div class="timer-row">
+          <div>
+            <label>Agent</label>
+            <select id="rt_agent">
+              <option value="vecuronium">Vecuronium (IBW)</option>
+              <option value="atracurium">Atracurium (TBW)</option>
+              <option value="rocuronium">Rocuronium (IBW)</option>
+            </select>
+          </div>
+          <div><label>Bolus (mg/kg)</label><input id="rt_bolus" inputmode="decimal" value="0.03"/></div>
+          <div><label>Window (min–max, min)</label><input id="rt_window" value="20–30" /></div>
+          <div><label>Haptics</label><select id="rt_buzz"><option value="buzzbeep">Buzz + Beep</option><option value="buzz">Buzz only</option><option value="silent">Silent</option></select></div>
+          <div><label>&nbsp;</label><button class="secondary" id="rt_add" disabled>Add Timer</button></div>
+        </div>
+        <div class="small" style="margin-top:6px" id="rt_hint">Enter weight to enable timers.</div>
+      </div>
+      <div class="sep"></div>
+      <div id="rt_list"></div>
+    </div>
+  </details>
+
+  <!-- Syringes -->
+  <details id="sec-adults" class="section">
+    <summary>My Syringes — Adults <span class="badge" id="adult_guard"></span></summary>
+    <div class="bd">
+      <div class="small"><b>Relaxant choice</b>: <select id="adult_relaxant"><option value="vecuronium">Vecuronium</option><option value="atracurium">Atracurium</option></select>. Induction order: Fentanyl → Ketamine → Propofol → <b>Relaxant</b> → Reversal → others.</div>
+      <div id="adult_syr_list" class="grid2" style="margin-top:10px"></div>
+    </div>
+  </details>
+
+  <details id="sec-peds" class="section">
+    <summary>My Syringes — Pediatrics <span class="badge" id="peds_guard"></span></summary>
+    <div class="bd">
+      <div class="small">Calculator defaults to the <b>higher end</b> of dose ranges. Induction order: Midazolam → Glycopyrrolate → Propofol/Ketamine/Thiopentone → <b>Succinylcholine</b> (if used) → Non‑depolarizing Relaxant → Reversal → others.</div>
+      <div class="small" style="margin-top:6px"><b>Relaxant choice</b>: <select id="peds_relaxant"><option value="vecuronium">Vecuronium</option><option value="atracurium">Atracurium</option></select></div>
+      <div id="ped_syr_list" class="grid2" style="margin-top:10px"></div>
+    </div>
+  </details>
+
+  <details id="sec-ref" class="section"><summary>Drug Doses (reference)</summary>
+    <div class="bd" id="ref_doses"></div>
+  </details>
+
+  <details id="sec-airway" class="section"><summary>Airway (ETT, LMA, Suction)</summary>
+    <div class="bd grid2" id="airway_grid">
+      <div class="card"><div class="hd">ETT estimates</div><div class="bd">
+        <div id="air_adult" class=""><div><b>Adult ETT (ID):</b> <span id="adult_id"></span></div><div class="small">Typical: Male 7.5 ±0.5, Female 7.0 ±0.5.</div></div>
+        <div id="air_ped" class="hidden"><div><b>Cuffed (ID):</b> <span id="cuffed_id">-</span></div><div><b>Uncuffed (ID):</b> <span id="uncuffed_id">-</span></div></div>
+        <div class="sep"></div>
+        <div><b>Depth @ lip (oral):</b> <span id="depth_lip">-</span> cm</div>
+        <div><b>Depth (nasal):</b> <span id="depth_nasal">-</span> cm</div>
+        <div class="small">Alt rule: <span id="depth_alt_age">-</span> cm (10 + age/2).</div>
+      </div></div>
+      <div class="card"><div class="hd">LMA & Suction catheter</div><div class="bd">
+        <div><b>LMA size:</b> <span id="lma_sz">-</span></div>
+        <div class="sep"></div>
+        <div class="row">
+          <div><label>ETT ID (mm)</label><input id="suct_ett" inputmode="decimal" placeholder="e.g., 7.5"/></div>
+          <div style="flex:0 0 220px"><label>Population</label><select id="suct_pop"><option value="adult">Adult</option><option value="peds">Infant/Child</option></select></div>
+        </div>
+        <div class="small">Catheter OD ≤ 70% (adult) or ≤ 50% (peds) of ETT ID. Suggests common even French sizes.</div>
+        <div style="margin-top:6px"><b>Suggested catheter:</b> <span id="suct_out">-</span></div>
+      </div></div>
+    </div>
+  </details>
+
+  <details id="sec-fluids" class="section"><summary>Fluids & EBV</summary><div class="bd grid2">
+    <div class="card"><div class="hd">Maintenance & Deficit</div><div class="bd">
+      <div><b>Maintenance (4–2–1):</b> <span id="maint_rate">0</span> mL/h</div>
+      <div class="row" style="margin-top:8px">
+        <div><label>NPO time (hours)</label><input id="npo_hrs" inputmode="decimal" value="8"/></div>
+        <div style="flex:0 0 170px"><div class="small">Calculated deficit</div><div id="deficit_ml">0 mL</div></div>
+      </div>
+    </div></div>
+    <div class="card"><div class="hd">EBV & ABL</div><div class="bd">
+      <div><b>Estimated Blood Volume (EBV):</b> <span id="ebv_total">0</span> mL (<span id="ebv_perkg">-</span> mL/kg)</div>
+      <div class="row" style="margin-top:8px">
+        <div><label>Hb start</label><input id="hb_start" inputmode="decimal" value="13"/></div>
+        <div><label>Hb minimum</label><input id="hb_min" inputmode="decimal" value="8"/></div>
+        <div><label>ABL (approx)</label><div class="pill"><span id="abl">0</span> mL</div></div>
+      </div>
+    </div></div>
+  </div></details>
+
+  <details id="sec-la" class="section"><summary>Local Anesthetics — max dose</summary><div class="bd">
+    <div class="small">Using dosing basis: <span id="la_basis">AUTO</span>. For AUTO, drug‑specific recommendations are applied where available; otherwise TBW is used.</div>
+    <div id="la_grid" class="grid2" style="margin-top:8px"></div>
+  </div></details>
+
+  <details id="sec-mac" class="section"><summary>Volatile MAC</summary><div class="bd">
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr><th>Agent</th><th>Adult MAC ~20–40y</th><th>60y</th><th>Child (3–5y)</th><th>Infant (6–12 mo)</th><th>Neonate</th></tr></thead>
+      <tbody id="mac_table"></tbody>
+    </table>
+    <div class="small" style="margin-top:8px">Adjust for nitrous, temperature, pregnancy, and comorbidity. Values are approximate ET targets.</div>
+  </div></details>
+
+  <details id="sec-paracetamol" class="section"><summary>Paracetamol</summary><div class="bd">
+    <div class="row">
+      <div><label>Route</label><select id="pcm_route"><option value="rectal">Rectal (suppository)</option><option value="oral">Oral</option><option value="iv">IV</option></select></div>
+      <div><label>Dose plan</label><select id="pcm_plan">
+        <option value="peds_rectal">Pediatric rectal: load 30–40 mg/kg, then 15 mg/kg q6h (max 60 mg/kg/day)</option>
+        <option value="adult">Adult: 1 g per dose (max 4 g/day)</option>
+        <option value="custom">Custom mg/kg</option></select></div>
+    </div>
+    <div id="pcm_supp" style="margin-top:8px">
+      <div class="small">Available suppository strengths (edit if your pharmacy differs): 80, 125, 170, 250, 500 mg</div>
+      <div class="row" style="margin-top:6px">
+        <div><label>Strengths (comma‑sep)</label><input id="pcm_sizes" value="80,125,170,250,500"/></div>
+        <div><label>Custom mg/kg (optional)</label><input id="pcm_custom" placeholder="e.g., 20"/></div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div id="pcm_out"></div>
+  </div></details>
+
+  <details id="sec-emergency" class="section"><summary>Emergency drugs</summary><div class="bd">
+    <div class="warnbox">Follow your department ACLS/PALS protocols. This does quick arithmetic only.</div>
+    <div class="row" style="margin-top:8px">
+      <div><label>Scenario</label><select id="em_scn">
+        <option value="ana_anaph">Anaphylaxis (IM adrenaline)</option>
+        <option value="ca_adult">Adult cardiac arrest (IV adrenaline)</option>
+        <option value="ca_peds">Pediatric cardiac arrest (IV adrenaline)</option>
+        <option value="brady">Symptomatic bradycardia (Atropine)</option>
+        <option value="amio">Shock‑refractory VF/pVT (Amiodarone)</option>
+        <option value="bicarb">Severe hyperK/overdose (Sodium bicarbonate 8.4%)</option>
+      </select></div>
+    </div>
+    <div class="sep"></div>
+    <div id="em_out"></div>
+  </div></details>
+
+  <details id="sec-neuraxial" class="section"><summary>Spinal / Epidural</summary><div class="bd grid2">
+    <div class="card"><div class="hd">Spinal — typical doses & adjuncts</div><div class="bd">
+      <div class="small">Adjust by height/age/pregnancy/level; verify locally.</div>
+      <div class="row" style="margin-top:6px">
+        <div><label>Agent</label><select id="sp_agent">
+          <option value="bupi_h">0.5% Heavy Bupivacaine</option>
+          <option value="ropi_iso">0.5% Isobaric Ropivacaine</option>
+        </select></div>
+        <div><label>Planned dose (mL)</label><input id="sp_ml" value="2.2" inputmode="decimal"/></div>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <div><label>Adjuncts</label>
+          <select id="sp_adj" multiple size="4">
+            <option value="fent10">Fentanyl 10 mcg</option>
+            <option value="fent25">Fentanyl 25 mcg</option>
+            <option value="morph100">Morphine 100 mcg</option>
+            <option value="morph200">Morphine 200 mcg</option>
+            <option value="clon15">Clonidine 15 mcg</option>
+            <option value="clon30">Clonidine 30 mcg</option>
+          </select>
+        </div>
+        <div><label>Preset</label><select id="sp_preset">
+          <option value="none">None</option>
+          <option value="cs">Cesarean: Heavy bupi 10–12.5 mg + fent 10–25 mcg + morph 100–200 mcg</option>
+          <option value="le">Lower limb: Heavy bupi 12–15 mg ± fent 10–25 mcg</option>
+        </select></div>
+      </div>
+      <div class="sep"></div>
+      <div id="sp_out"></div>
+    </div></div>
+    <div class="card"><div class="hd">Epidural — doses, top‑ups & infusions</div><div class="bd">
+      <div class="row">
+        <div><label>Context</label><select id="ep_ctx">
+          <option value="test">Test dose</option>
+          <option value="surg_topup">Surgical top‑up</option>
+          <option value="labor_bupi">Labor: Bupivacaine 0.0625–0.125% + fentanyl 1–2 mcg/mL</option>
+          <option value="labor_ropi">Ropivacaine 0.1–0.2% + fentanyl 1–2 mcg/mL</option>
+          <option value="postop_ropi">Post‑op infusion: Ropivacaine 0.2%</option>
+        </select></div>
+        <div><label>Volume (mL)</label><input id="ep_vol" value="10" inputmode="decimal"/></div>
+      </div>
+      <div class="sep"></div>
+      <div id="ep_out"></div>
+    </div></div>
+  </div></details>
+
+  <details id="sec-infusions" class="section"><summary>Infusions</summary><div class="bd">
+    <div class="card"><div class="hd">Standard infusion recipes</div><div class="bd"><div id="inf_list"></div></div></div>
+    <div class="card" style="margin-top:12px"><div class="hd">Custom infusion calculator</div><div class="bd">
+      <div class="row">
+        <div><label>Drug name</label><input id="inf_name" placeholder="e.g., Noradrenaline"/></div>
+        <div><label>Mix (mg in mL)</label><input id="inf_mix" value="4 in 50" /></div>
+        <div><label>Target</label><select id="inf_target">
+          <option value="mcgkgmin">mcg/kg/min</option>
+          <option value="mcghr">mcg/h</option>
+          <option value="mgmin">mg/min</option>
+          <option value="units_hr">units/h</option>
+        </select></div>
+        <div><label>Rate value</label><input id="inf_rate" value="0.05" inputmode="decimal"/></div>
+      </div>
+      <div class="sep"></div>
+      <div id="inf_out"></div>
+    </div></div>
+  </div></details>
+
+  <details id="sec-insulin" class="section"><summary>Insulin</summary><div class="bd">
+    <div class="card"><div class="hd">Types & selection</div><div class="bd">
+      <div class="small">Use local protocol. This is a quick reference and calculator.</div>
+      <div class="grid2">
+        <div class="item">
+          <b>Types overview</b>
+          <ul style="margin:6px 0 0 18px;padding:0">
+            <li><b>Rapid‑acting</b> (lispro/aspart/glulisine): onset ~10–20 min, peak 1–3 h, duration 3–5 h.</li>
+            <li><b>Short‑acting</b> (regular): onset 30–60 min, peak 2–4 h, duration 6–8 h.</li>
+            <li><b>Intermediate</b> (NPH): onset 1–2 h, peak 4–12 h, duration 14–24 h.</li>
+            <li><b>Long‑acting</b> (glargine/detemir/degludec): flat profile, 18–42 h.</li>
+            <li><b>Premix</b> (e.g., 70/30): % NPH + % regular/rapid.</li>
+          </ul>
+        </div>
+        <div class="item">
+          <b>Pick a scenario</b>
+          <div class="row" style="margin-top:6px">
+            <div><label>Scenario</label><select id="ins_scn">
+              <option value="t2dm_opd">T2DM, eating normally (OPD)</option>
+              <option value="t2dm_npo">T2DM, pre‑op NPO</option>
+              <option value="t1dm">Type 1 diabetes</option>
+              <option value="dka">DKA/HHS (inpatient)</option>
+              <option value="preg">Pregnancy</option>
+              <option value="renal">Elderly/renal/hepatic impairment</option>
+            </select></div>
+            <div><label>Total Daily Dose estimate (U/kg)</label><select id="ins_tdd">
+              <option value="0.3">0.3 (frail/elderly/renal)</option>
+              <option value="0.4" selected>0.4 (average)</option>
+              <option value="0.5">0.5 (usual)</option>
+              <option value="0.6">0.6 (insulin resistant)</option>
+            </select></div>
+          </div>
+          <div class="sep"></div>
+          <div id="ins_plan"></div>
+        </div>
+      </div>
+    </div></div>
+
+    <div class="card" style="margin-top:12px"><div class="hd">Basal‑bolus calculator</div><div class="bd">
+      <div class="row">
+        <div><label>Use TDD preset above or enter TDD (U)</label><input id="ins_tdd_abs" placeholder="auto from U/kg"/></div>
+        <div><label>Basal fraction</label><input id="ins_basal_frac" value="0.5"/></div>
+        <div><label>Meals per day</label><input id="ins_meals" value="3"/></div>
+      </div>
+      <div class="sep"></div>
+      <div id="ins_split"></div>
+    </div></div>
+
+    <div class="card" style="margin-top:12px"><div class="hd">IV insulin infusion helper</div><div class="bd">
+      <div class="row">
+        <div><label>Recipe</label><select id="ins_recipe">
+          <option value="50u50ml">Regular insulin 50 U in 50 mL NS (1 U/mL)</option>
+          <option value="100u100ml">Regular insulin 100 U in 100 mL NS (1 U/mL)</option>
+          <option value="custom">Custom (U in mL)</option>
+        </select></div>
+        <div><label>Custom (U in mL)</label><input id="ins_custom_mix" placeholder="e.g., 50 in 50"/></div>
+        <div><label>Target units/h</label><input id="ins_units_hr" value="2" inputmode="decimal"/></div>
+      </div>
+      <div class="sep"></div>
+      <div id="ins_iv_out"></div>
+    </div></div>
+  </div></details>
+
+  <details id="sec-custom" class="section"><summary>Custom Drug</summary><div class="bd">
+    <div class="row">
+      <div><label>Drug name</label><input id="cust_name" placeholder="e.g., Remifentanil" /></div>
+      <div style="flex:0 0 120px"><label>Unit</label><select id="cust_unit"><option value="mg">mg</option><option value="mcg">mcg</option></select></div>
+      <div style="flex:0 0 190px"><label>Weight basis</label><select id="cust_basis"><option value="TBW">TBW</option><option value="IBW">IBW</option><option value="LBW">LBW</option></select></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div><label>Min (/kg)</label><input id="cust_min" inputmode="decimal" value="0" /></div>
+      <div><label>Max (/kg)</label><input id="cust_max" inputmode="decimal" value="0" /></div>
+      <div><label>Conc ({unit}/mL)</label><input id="cust_conc" inputmode="decimal" value="10" /></div>
+      <div style="flex:0 0 auto; display:flex; align-items:center; gap:8px"><input id="cust_inf" type="checkbox" /><label for="cust_inf" style="margin:0">Infusion per hour</label></div>
+      <div><label>Weight (auto)</label><div class="pill"><span id="cust_wt">-</span> kg</div></div>
+    </div>
+    <div class="sep"></div>
+    <div id="cust_output" class="small">Fill the fields above to calculate a personalized range.</div>
+  </div></details>
+
+  <details id="sec-about" class="section"><summary>About</summary><div class="bd small">
+    <ul>
+      <li>Bottom tab bar: compact tabs + horizontal swipe.</li>
+      <li>Region picker non‑sticky; kg only.</li>
+      <li>Height: cm / inches / ft+in supported.</li>
+      <li>Per‑drug weight basis with pediatric auto‑TBW.</li>
+      <li>Relaxant timers: agent‑specific default bolus, total time tracking.</li>
+      <li>Peds reversal: personalized 10 mL recipe (neo+glyco+NS).</li>
+      <li>Layout: compact gutters, wider pills, clean section edges.</li>
+    </ul>
+    <div class="small">v1.3.24 • Personal use</div>
+  </div></details>
+</div>
+
+<!-- Bottom quick-nav -->
+<div class="botnav" id="botnav">
+  <button data-jump="#root">Top</button>
+  <button data-jump="#sec-timers">Timers</button>
+  <button data-jump="#sec-adults">Adults</button>
+  <button data-jump="#sec-peds">Peds</button>
+  <button data-jump="#sec-airway">Airway</button>
+  <button data-jump="#sec-fluids">Fluids</button>
+  <button data-jump="#sec-la">Local Anesthetics</button>
+  <button data-jump="#sec-mac">MAC</button>
+  <button data-jump="#sec-paracetamol">Paracetamol</button>
+  <button data-jump="#sec-emergency">Emergency</button>
+  <button data-jump="#sec-neuraxial">Spinal/Epidural</button>
+  <button data-jump="#sec-infusions">Infusions</button>
+  <button data-jump="#sec-insulin">Insulin</button>
+  <button data-jump="#sec-custom">Custom</button>
+  <button data-jump="#sec-about">About</button>
+</div>
+
+<script>
+  // Region persist
+  (function(){
+    var region=localStorage.getItem('atk_region')||'india'; document.getElementById('region').value=region;
+    document.getElementById('region').onchange=function(e){ localStorage.setItem('atk_region', e.target.value); };
+    // Bottom nav jumps
+    document.querySelectorAll('.botnav [data-jump]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var sel=btn.getAttribute('data-jump'); var el = sel.startsWith('#')? document.querySelector(sel): document.querySelector(sel);
+        if(el){ if(el.tagName==='DETAILS') el.open = true; el.scrollIntoView({behavior:'smooth', block:'start'}); }
+      });
+    });
+  })();
+</script>
+
+<script>
+  // Helpers & derived measures
+  function round(n,d){ if(n==null||isNaN(n)) return '-'; var p=Math.pow(10,d||2); return Math.round(n*p)/p; }
+  function toNum(v){ var n=parseFloat(String(v).replace(/,/g,'')); return isFinite(n)?n:0; }
+  function inToCm(i){ return i*2.54; }
+  function devineIBW(sex,h){ if(!h) return 0; var base=(sex==='female')?45.5:50; var extra=Math.max(0,h-152.4)*0.9; return base+extra; }
+  function janmaLBW(sex,w,h){ if(!h||!w) return 0; var m=h/100; var bmi=w/(m*m); return (sex==='female')?(9270*w)/(8780+244*bmi):(9270*w)/(6680+216*bmi); }
+  function mostellerBSA(h,w){ if(!h||!w) return 0; return Math.sqrt((h*w)/3600); }
+  function weightFor(basis,d){ // AUTO → per-drug handled elsewhere
+    if(basis==='IBW')return d.ibw||d.weightKg;
+    if(basis==='LBW')return d.lbw||d.weightKg;
+    return d.weightKg;
+  }
+  function derive(){
+    var w=toNum(state.weight);
+    var h=0;
+    if(state.heightUnit==='cm'){ h=toNum(state.heightCm); }
+    else if(state.heightUnit==='in'){ h=inToCm(toNum(state.heightIn)); }
+    else { var ft=toNum(state.heightFt), inch=toNum(state.heightIn2); h=inToCm(ft*12 + inch); }
+    var m=h?h/100:0; var bmi=(m>0&&w>0)?(w/(m*m)):0; var age=toNum(state.age);
+    var ibw = (h>0 && age>=12) ? devineIBW(state.sex,h) : 0;
+    var lbw = (h>0 && age>=12) ? janmaLBW(state.sex,w,h) : 0;
+    var bsa = (h>0 && w>0) ? mostellerBSA(h,w) : 0;
+    return {weightKg:w||0,heightCm:h||0,bmi:bmi,ibw:ibw,lbw:lbw,bsa:bsa};
+  }
+</script>
+
+<script>
+  // State
+  var state=JSON.parse(localStorage.getItem('atk_patient_v136')||'{"age":"","weight":"","heightCm":"","heightIn":"","heightFt":"","heightIn2":"","heightUnit":"cm","sex":"male","weightBasis":"AUTO","npo":8,"hbStart":13,"hbMin":8}');
+  function $(id){ return document.getElementById(id); }
+  function renderSummary(d){ $('sum_tbw').textContent=round(d.weightKg,2)+' kg'; var isPeds = (toNum(state.age)<12 && toNum(state.age)>0); $('sum_ibw').textContent= isPeds? '—' : (d.ibw? (round(d.ibw,2)+' kg') : '—'); $('sum_lbw').textContent= isPeds? '—' : (d.lbw? (round(d.lbw,2)+' kg') : '—'); $('sum_bmi').textContent=round(d.bmi,1); $('sum_bsa').textContent= d.bsa? (round(d.bsa,2)+' m²') : '—'; $('sum_age').textContent=state.age||'-'; }
+  function saveState(){ localStorage.setItem('atk_patient_v136', JSON.stringify(state)); }
+</script>
+
+<script>
+  // Relaxant timers with cumulative total
+  var timers = JSON.parse(localStorage.getItem('atk_relaxant_timers_v136')||'[]');
+  var audioCtx = null;
+  function buzz(){ try{ if(localStorage.getItem('atk_haptics')!=='silent' && 'vibrate' in navigator) navigator.vibrate([80,40,80]); }catch(e){} }
+  function beep(){ try{ if(localStorage.getItem('atk_haptics')==='buzz') return; if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); var o=audioCtx.createOscillator(); var g=audioCtx.createGain(); o.type='sine'; o.frequency.value=880; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(0.001,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.1, audioCtx.currentTime+0.02); o.start(); setTimeout(function(){ o.stop(); }, 180); }catch(e){} }
+  function now(){ return Date.now(); }
+  function msToClock(ms){ var s=Math.max(0,Math.floor(ms/1000)); var h=Math.floor(s/3600); s-=h*3600; var m=Math.floor(s/60); s-=m*60; return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
+  function suggestWindow(agent, bolus){ if(agent==='vecuronium'){ if(bolus<=0.02) return [12,20]; if(bolus<=0.03) return [20,30]; if(bolus<=0.04) return [25,35]; return [30,40]; } else if(agent==='atracurium'){ if(bolus<=0.08) return [10,15]; return [15,20]; } else if(agent==='rocuronium'){ if(bolus<=0.1) return [12,20]; if(bolus<=0.15) return [20,30]; return [25,40]; } return [15,25]; }
+  function defaultBolusFor(agent){ if(agent==='vecuronium') return 0.03; if(agent==='atracurium') return 0.10; if(agent==='rocuronium') return 0.10; return 0.03; }
+  function basisFor(agent){ return (agent==='vecuronium'||agent==='rocuronium')?'IBW':'TBW'; }
+  function weightForAgent(agent,d){ var age=toNum(state.age); if(age>0 && age<12){ return d.weightKg; } var b=basisFor(agent); return (b==='IBW')?(d.ibw||d.weightKg):(b==='LBW')?(d.lbw||d.weightKg):d.weightKg; }
+  function renderTimerHint(){ var a=$('rt_agent').value, b=toNum($('rt_bolus').value||defaultBolusFor(a)); var w=suggestWindow(a,b); $('rt_window').value = w[0]+'–'+w[1]; var bas=basisFor(a); var d=derive(); var kg=weightForAgent(a,d); var age=toNum(state.age); var basDisp=(age>0 && age<12)?'TBW':bas; var enabled = kg>0; $('rt_add').disabled=!enabled; var note = ($('rt_bolus').dataset.autoset==='1' && !$('rt_bolus').dataset.dirty) ? (' Default bolus set to '+b.toFixed(2)+' mg/kg for '+a+'.') : ''; $('rt_hint').innerHTML= enabled ? ('Basis: <b>'+basDisp+'</b>. Using weight '+round(kg,1)+' kg. Suggested window <b>'+w[0]+'–'+w[1]+' min</b>.'+note) : 'Enter weight to enable timers.'; }
+  function saveTimers(){ localStorage.setItem('atk_relaxant_timers_v136', JSON.stringify(timers)); }
+  function addTimer(){ var a=$('rt_agent').value, b=toNum($('rt_bolus').value||0.03); var wtxt=String($('rt_window').value||'20–30'); var mm=wtxt.split(/[–-]/); var wmin=toNum(mm[0]), wmax=toNum(mm[1]||mm[0]+10); var d=derive(); var kg=weightForAgent(a,d); if(!(kg>0)) return; var id='t'+Math.random().toString(36).slice(2,9); var t={id:id, agent:a, bolus:b, kg:kg, basis:basisFor(a), windowMin:wmin, windowMax:wmax, start:now(), paused:false, offset:0, totalStart:now(), totalPaused:0, pauseAt:0, log:[]}; timers.push(t); saveTimers(); renderTimers(); buzz(); beep(); }
+  function resetTimer(id){ var t=timers.find(x=>x.id===id); if(!t) return; t.start=now(); t.offset=0; t.paused=false; t.log.push({ts:now(), ev:'reset'}); saveTimers(); renderTimers(); }
+  function pauseTimer(id){ var t=timers.find(x=>x.id===id); if(!t||t.paused) return; t.paused=true; t.pauseAt=now(); saveTimers(); renderTimers(); }
+  function resumeTimer(id){ var t=timers.find(x=>x.id===id); if(!t||!t.paused) return; t.totalPaused += (now()-t.pauseAt); t.start=now(); t.pauseAt=0; t.paused=false; saveTimers(); renderTimers(); }
+  function removeTimer(id){ timers = timers.filter(x=>x.id!==id); saveTimers(); renderTimers(); }
+  function topUpNow(id){ var t=timers.find(x=>x.id===id); if(!t) return; t.log.push({ts:now(), ev:'topup'}); t.start=now(); t.offset=0; t.paused=false; saveTimers(); renderTimers(); buzz(); beep(); }
+  var raf=0;
+  function tick(){ var list = document.querySelectorAll('[data-timer-id]'); list.forEach(function(node){ var id=node.getAttribute('data-timer-id'); var t=timers.find(x=>x.id===id); if(!t) return; var elapsed = t.paused ? t.offset : (t.offset + (now()-t.start)); var total = (now()-t.totalStart) - t.totalPaused - (t.paused ? (now()-t.pauseAt):0); var ms = elapsed; var min=t.windowMin*60*1000, max=t.windowMax*60*1000; var prog = Math.min(100, Math.max(0, (ms/max)*100)); var bar = node.querySelector('.progress>div'); if(bar) bar.style.width = prog+'%'; var clock = node.querySelector('.timebig'); if(clock) clock.textContent = msToClock(ms); var tot = node.querySelector('.tottime'); if(tot) tot.textContent = msToClock(total); var nextTxt = node.querySelector('.nexttxt'); if(nextTxt){ var untilMin = Math.max(0, min-ms); var untilMax = Math.max(0, max-ms); nextTxt.textContent = 'Check: '+Math.ceil(untilMin/60000)+'–'+Math.ceil(untilMax/60000)+' min'; } var firedMin=node.getAttribute('data-fired-min')==='1', firedMax=node.getAttribute('data-fired-max')==='1'; if(!firedMin && ms>=min){ node.setAttribute('data-fired-min','1'); buzz(); beep(); } if(!firedMax && ms>=max){ node.setAttribute('data-fired-max','1'); buzz(); beep(); } if(ms>=max){ node.style.borderColor = 'var(--danger)'; node.style.boxShadow = '0 0 0 2px var(--dangerbg)'; } else if(ms>=min){ node.style.borderColor = 'var(--warn)'; node.style.boxShadow = '0 0 0 2px var(--warn-bg)'; } else { node.style.borderColor = 'var(--border)'; node.style.boxShadow = 'var(--shadow)'; } }); raf = requestAnimationFrame(tick); }
+  function renderTimers(){ var host=$('rt_list'); host.innerHTML=''; localStorage.setItem('atk_haptics', $('rt_buzz').value); if(!timers.length){ var emp=document.createElement('div'); emp.className='small'; emp.textContent='No timers yet. Configure above and tap “Add Timer”.'; host.appendChild(emp); } timers.forEach(function(t){ var div=document.createElement('div'); div.className='card'; div.style.marginBottom='10px'; div.setAttribute('data-timer-id', t.id); var title = t.agent.charAt(0).toUpperCase()+t.agent.slice(1); var mg = round(t.kg*t.bolus,2); div.innerHTML = '<div class="hd">'+title+' — bolus '+t.bolus+' mg/kg ('+t.basis+', '+round(t.kg,1)+' kg = '+mg+' mg)</div>'+'<div class="bd">'+'<div class="timer-row">'+'<div class="pill"><div class="small">Window</div>'+t.windowMin+'–'+t.windowMax+' min</div>'+'<div class="pill"><div class="small">Elapsed (this cycle)</div><span class="timebig">00:00</span></div>'+'<div class="pill nexttxt"><div class="small">Check</div>—</div>'+'<div class="pill"><div class="small">Total under agent</div><span class="tottime">00:00</span></div>'+'</div>'+'<div class="progress" style="margin:10px 0"><div></div></div>'+'<div class="row">'+'<div><button class="ghost" onclick="resetTimer(\''+t.id+'\')">Reset cycle</button></div>'+(t.paused?'<div><button onclick="resumeTimer(\''+t.id+'\')">Resume</button></div>':'<div><button onclick="pauseTimer(\''+t.id+'\')">Pause</button></div>')+'<div><button class="warn" onclick="topUpNow(\''+t.id+'\')">Top up now & Restart</button></div>'+'<div><button class="danger" onclick="removeTimer(\''+t.id+'\')">Remove</button></div>'+'</div>'+'<div class="small" style="margin-top:8px">Use TOF/clinical signs; these reminders do not replace monitoring.</div>'+'</div>'; host.appendChild(div); }); if(raf) cancelAnimationFrame(raf); tick(); }
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ renderTimers(); } });
+  document.addEventListener('DOMContentLoaded', function(){
+      var bolEl=$('rt_bolus');
+      bolEl.addEventListener('input', function(){ this.dataset.dirty='1'; renderTimerHint(); });
+      $('rt_agent').addEventListener('change', function(){ var a=this.value; var bolEl=$('rt_bolus'); if(!bolEl.dataset.dirty){ bolEl.value = defaultBolusFor(a).toFixed(2); bolEl.dataset.autoset='1'; } else { bolEl.dataset.autoset='0'; } renderTimerHint(); });
+      $('rt_add').onclick=addTimer; $('rt_buzz').onchange=function(){ localStorage.setItem('atk_haptics', this.value); };
+      // initial default
+      $('rt_bolus').value = defaultBolusFor($('rt_agent').value).toFixed(2);
+      renderTimerHint(); renderTimers();
+    });
+</script>
+
+<script>
+  // Syringes, refs etc. (unchanged from last build where relevant)...
+  var DRUG_META={
+    propofol:{basis:'LBW',min:1.5,max:2.5,unit:'mg/kg',note:'Induction 1.5–2.5 mg/kg (LBW in obesity).'},
+    ketamine:{basis:'TBW',min:1,max:2,unit:'mg/kg',note:'IV 1–2 mg/kg; IM 4–6 mg/kg.'},
+    fentanyl:{basis:'TBW',min:1,max:2,unit:'mcg/kg',note:'1–2 mcg/kg IV.'},
+    atracurium:{basis:'TBW',min:0.5,max:0.5,unit:'mg/kg',maint:'0.08–0.1 mg/kg bolus or 5–10 mcg/kg/min',note:'Induction 0.5 mg/kg.'},
+    vecuronium:{basis:'IBW',min:0.08,max:0.1,unit:'mg/kg',maint:'0.02–0.05 mg/kg bolus or 0.8–1.2 mcg/kg/min',note:'Induction 0.08–0.1 mg/kg; dose by IBW.'},
+    reversal_mix:{basis:'IBW',note:'Target: neostigmine 0.04–0.07 mg/kg + glycopyrrolate 0.01 mg/kg.'},
+    adrenaline:{basis:'TBW',note:'See Emergency tab for weight‑based bolus/infusion.'},
+    atropine:{basis:'TBW',note:'Bradycardia dosing per ACLS/PALS.'},
+    lidocaine:{basis:'TBW',note:'IV antiarrhythmic / pre‑treatment per protocol.'},
+    deriphylline:{basis:'TBW',note:'Verify brand strength; titrate to effect.'},
+    thiopentone:{basis:'TBW',min:3,max:5,unit:'mg/kg',note:'Induction ~3–5 mg/kg (adjust).'}
+  };
+  var ADULT_BASE=[
+    {label:"Fentanyl",alias:"fentanyl",unit:"mcg",stock_conc:50,use_ml:2,total_ml:10,note:"2 mL (50 mcg/mL) → 10 mcg/mL"},
+    {label:"Ketamine",alias:"ketamine",unit:"mg",stock_conc:50,use_ml:2,total_ml:10,note:"2 mL of 50 mg/mL → 10 mg/mL"},
+    {label:"Propofol (undiluted)",alias:"propofol",unit:"mg",stock_conc:10,use_ml:10,total_ml:10,note:"10 mL of 10 mg/mL — no dilution."},
+    {label:"Reversal mix (Adult)",alias:"reversal_mix",is_mix:true,total_ml:10,parts:[{alias:"neostigmine",unit:"mg",conc:0.5,ml:5},{alias:"glycopyrrolate",unit:"mg",conc:0.2,ml:2}],note:"5 mL neostigmine (0.5 mg/mL) + 2 mL glycopyrrolate (0.2 mg/mL) → to 10 mL (neo 0.25 mg/mL; glyco 0.04 mg/mL)"},
+    {label:"Xylocard (Lidocaine IV)",alias:"lidocaine",unit:"mg",stock_conc:20,use_ml:3,total_ml:10,note:"→ 6 mg/mL"},
+    {label:"Thiopentone",alias:"thiopentone",unit:"mg",stock_conc:500,use_ml:10,total_ml:10,note:"→ 50 mg/mL"},
+    {label:"Steroids",alias:"steroids_mix",is_mix:true,total_ml:10,parts:[{alias:"hydrocortisone",unit:"mg",conc:100,ml:1},{alias:"dexamethasone",unit:"mg",conc:4,ml:2}],note:"to 10 mL"},
+    {label:"Atropine",alias:"atropine",unit:"mg",stock_conc:0.6,use_ml:2,total_ml:10,note:"→ 0.12 mg/mL"},
+    {label:"Adrenaline",alias:"adrenaline",unit:"mg",stock_conc:1,use_ml:1,total_ml:10,note:"→ 0.1 mg/mL (1:10,000)"},
+    {label:"Deriphylline*",alias:"deriphylline",unit:"mg",stock_conc:110,use_ml:2,total_ml:10,note:"*Verify brand strength (India variants)."}
+  ];
+  var ADULT_RELAXANTS={
+    vecuronium:{label:"Vecuronium",alias:"vecuronium",unit:"mg",stock_conc:10,use_ml:10,total_ml:10,note:"Powder 10 mg + 10 mL NS → 1 mg/mL"},
+    atracurium:{label:"Atracurium",alias:"atracurium",unit:"mg",stock_conc:10,use_ml:5,total_ml:10,note:"→ 2.5 mg/mL"}
+  };
+  var PEDS_PRESETS=[
+    {label:"Midazolam",alias:"midaz",unit:"mg",stock_conc:5,use_ml:1,total_ml:10,note:"1 mL of 5 mg/mL → 0.5 mg/mL", dose:{min:0.05,max:0.1,unit:'mg/kg',basis:'TBW'}},
+    {label:"Glycopyrrolate",alias:"glyco",unit:"mg",stock_conc:0.2,use_ml:1,total_ml:10,note:"1 mL of 0.2 mg/mL → 0.02 mg/mL", dose:{min:0.005,max:0.01,unit:'mg/kg',basis:'TBW'}},
+    {label:"Propofol",alias:"propofol",unit:"mg",stock_conc:10,use_ml:5,total_ml:10,note:"5 mL of 10 mg/mL → 5 mg/mL", dose:{min:2,max:3,unit:'mg/kg',basis:'TBW'}},
+    {label:"Ketamine",alias:"ketamine",unit:"mg",stock_conc:50,use_ml:1,total_ml:10,note:"1 mL of 50 mg/mL → 5 mg/mL", dose:{min:1,max:2,unit:'mg/kg',basis:'TBW'}},
+    {label:"Thiopentone",alias:"thiopentone",unit:"mg",stock_conc:500,use_ml:3,total_ml:10,note:"3 mL of 500 mg/10 mL → 150 mg total → 15 mg/mL", dose:{min:5,max:6,unit:'mg/kg',basis:'TBW'}},
+    {label:"Succinylcholine",alias:"sux",unit:"mg",stock_conc:50,use_ml:1,total_ml:10,note:"1 mL of 50 mg/mL → 5 mg/mL", dose:{min:1,max:2,unit:'mg/kg',basis:'TBW'}},
+    {label:"Atropine",alias:"atropine",unit:"mg",stock_conc:0.6,use_ml:1,total_ml:10,note:"1 mL of 0.6 mg/mL → 0.06 mg/mL", dose:{min:0.02,max:0.02,unit:'mg/kg',basis:'TBW'}},
+    {label:"Steroids",alias:"steroids_mix",is_mix:true,total_ml:10,parts:[{alias:"hydrocortisone",unit:"mg",conc:100,ml:1},{alias:"dexamethasone",unit:"mg",conc:4,ml:2}],note:"to 10 mL"},
+    {label:"Reversal mix (Peds)",alias:"rev_peds",is_mix:true,total_ml:10,parts:[{alias:"neostigmine",unit:"mg",conc:0.5,ml:2},{alias:"glycopyrrolate",unit:"mg",conc:0.2,ml:1}],note:"2 mL neostigmine (0.5 mg/mL) + 1 mL glycopyrrolate (0.2 mg/mL) → to 10 mL (neo 0.1 mg/mL; glyco 0.02 mg/mL). Target neo 0.04–0.07 mg/kg + glyco 0.01 mg/kg"}
+  ];
+
+  function concOf(p){ if(p.alias==='vecuronium'){ return 1; } return (p.stock_conc * p.use_ml) / p.total_ml; }
+  function totDrug(p){ if(p.alias==='vecuronium'){ return concOf(p)*p.total_ml; } return p.stock_conc * p.use_ml; }
+  function formatTot(p){ var tot = totDrug(p); var unit = p.unit; if(unit==='mcg'){ return Math.round(tot)+' mcg'; } return Math.round(tot*10)/10+' mg'; }
+
+  function weightForDrug(meta, d){
+    var basis = (state.weightBasis==='AUTO') ? (meta.basis||'TBW') : state.weightBasis;
+    var age=toNum(state.age);
+    if(age>0 && age<12){ basis='TBW'; }
+    if(basis==='IBW')return d.ibw||d.weightKg;
+    if(basis==='LBW')return d.lbw||d.weightKg;
+    return d.weightKg;
+  }
+
+  function addRedilutionHelper(container, preset, d){
+    var alias=preset.alias; if(alias!=='vecuronium' && alias!=='atracurium') return;
+    var conc = concOf(preset); var total_ml=preset.total_ml||10;
+    var meta=DRUG_META[alias]; var kg = weightForDrug(meta, d);
+    var defaultInd=(alias==='vecuronium')?0.1:0.5; var maintMid=(alias==='vecuronium')?0.03:0.09;
+    var wrap=document.createElement('div'); wrap.className='small'; wrap.style.marginTop='8px';
+    wrap.innerHTML='<b>Maintenance</b>: '+meta.maint+'.' +
+      '<div class="row" style="margin-top:6px"><div><label>Induction used (mg/kg)</label><input value="'+defaultInd+'" inputmode="decimal"></div>' +
+      '<div><label>Target maintenance bolus (mg/kg)</label><input value="'+maintMid+'" inputmode="decimal"></div></div>' +
+      '<div id="out_'+alias+'" style="margin-top:6px"></div>';
+    container.appendChild(wrap);
+    var inputs=wrap.getElementsByTagName('input');
+    function recalc(){
+      var ind=Number(inputs[0].value||defaultInd), maint=Number(inputs[1].value||maintMid);
+      var mg_total=conc*total_ml, mg_ind=kg*ind, vol_ind=mg_ind/conc;
+      var mg_rem=Math.max(0,mg_total-mg_ind), ml_rem=Math.max(0,total_ml-vol_ind);
+      var mg_bolus=kg*maint, desired_conc=mg_bolus/1.0, vol_needed=(desired_conc>0)?(mg_rem/desired_conc):0; if(vol_needed>10) vol_needed=10; var add_ml=Math.max(0,vol_needed-ml_rem);
+      var at_current=(mg_bolus/conc);
+      var lines=[];
+      lines.push('Remaining ~ <b>'+Math.round(mg_rem*100)/100+' mg</b> ('+Math.round(ml_rem*100)/100+' mL @ '+Math.round(conc*1000)/1000+' mg/mL).');
+      
+if (vol_needed <= ml_rem) {
+  lines.push('Keep current mix → draw ~<b>'+Math.round(at_current*100)/100+' mL</b> per maintenance bolus.');
+} else {
+  var cap=10; // syringe cannot exceed 10 mL
+  if (vol_needed > cap) {
+    var cappedConc = (cap>0)? (mg_rem / cap) : 0; // mg per mL achievable at 10 mL
+    var perBolus = (cappedConc>0)? (mg_bolus / cappedConc) : 0;
+    add_ml = Math.max(0, cap - ml_rem);
+    vol_needed = cap;
+    lines.push('Cap <b>10 mL</b>: achievable 1 mL ≈ <b>'+Math.round(cappedConc*100)/100+' mg</b>; draw ~<b>'+Math.round(perBolus*100)/100+' mL</b> per maintenance bolus.');
+  } else {
+    lines.push('To make <b>1 mL ≈ '+Math.round(mg_bolus*100)/100+' mg</b>, make total volume ~<b>'+Math.round(vol_needed*100)/100+' mL</b> (add ~<b>'+Math.round(add_ml*100)/100+' mL</b> NS).');
+  }
+}
+
+      wrap.querySelector('#out_'+alias).innerHTML = lines.map(function(s){return '<div>'+s+'</div>';}).join('');
+    }
+    inputs[0].oninput=recalc; inputs[1].oninput=recalc; recalc();
+  }
+
+  function renderAdultSyr(d){
+    var host=$('adult_syr_list'); host.innerHTML='';
+    var relaxSel=$('adult_relaxant').value || 'vecuronium';
+    var order=[ADULT_BASE[0], ADULT_BASE[1], ADULT_BASE[2], ADULT_RELAXANTS[relaxSel], ADULT_BASE[3], ADULT_BASE[4], ADULT_BASE[5], ADULT_BASE[6], ADULT_BASE[7], ADULT_BASE[8], ADULT_BASE[9]];
+    order.forEach(function(p){
+      var div=document.createElement('div'); div.className='item';
+      var meta=DRUG_META[p.alias]||{};
+      div.innerHTML='<b>'+p.label+'</b>' + (p.note?('<div class="small">'+p.note+'</div>'):'');
+
+      if(!p.is_mix){
+        var conc=concOf(p);
+        var total = formatTot(p);
+        var concLine=document.createElement('div'); concLine.className='small';
+        concLine.textContent='Final: '+(Math.round(conc*1000)/1000)+' '+p.unit+'/mL • Total in syringe: '+total;
+        div.appendChild(concLine);
+
+        if(meta.min && meta.max){
+          var kg = weightForDrug(meta, d);
+          var minU=kg*meta.min, maxU=kg*meta.max;
+          var volMin=(meta.unit==='mcg/kg')? (minU/(conc*1000)) : (minU/conc);
+          var volMax=(meta.unit==='mcg/kg')? (maxU/(conc*1000)) : (maxU/conc);
+          var std=document.createElement('div'); std.className='small';
+          std.innerHTML='Std: '+meta.min+'–'+meta.max+' '+meta.unit+' (basis '+((state.weightBasis==='AUTO')? (meta.basis||'TBW'):state.weightBasis)+').';
+          var act=document.createElement('div'); act.style.marginTop='6px';
+          act.innerHTML='<div class="pill"><b>Give ~'+(Math.round(volMin*100)/100)+'–'+(Math.round(volMax*100)/100)+' mL</b> (for '+(Math.round(minU*100)/100)+'–'+(Math.round(maxU*100)/100)+' '+meta.unit+').</div>';
+          div.appendChild(std); div.appendChild(act);
+
+          if(p.alias==='propofol' && volMax>10){
+            var tip=document.createElement('div'); tip.className='warnbox'; tip.style.marginTop='6px';
+            tip.textContent='Propofol is already undiluted (10 mg/mL). If >10 mL needed, prepare an additional 10 mL syringe or draw extra from the vial.';
+            div.appendChild(tip);
+          }
+        } else if(meta.note){
+          var note=document.createElement('div'); note.className='small'; note.textContent=meta.note; div.appendChild(note);
+        }
+        addRedilutionHelper(div, p, d);
+      } else {
+        var parts=p.parts||[]; var details=parts.map(function(pp){ return pp.alias+': '+(Math.round((pp.conc*pp.ml/p.total_ml)*1000)/1000)+' '+pp.unit+'/mL'; }).join('; ');
+        var s=document.createElement('div'); s.className='small'; s.textContent='Final per mL → '+details; div.appendChild(s);
+        if(p.alias==='reversal_mix'){
+          var kg=weightForDrug({basis:'IBW'}, d);
+          var neoConc=(parts[0].conc*parts[0].ml)/p.total_ml; // 0.25 mg/mL
+          var glyConc=(parts[1].conc*parts[1].ml)/p.total_ml; // 0.04 mg/mL
+          var neo=0.05*kg, gly=0.01*kg;
+          var vNeo=neo/neoConc, vGly=gly/glyConc, v=Math.max(vNeo,vGly);
+          var msg=document.createElement('div'); msg.className='warnbox'; msg.style.marginTop='6px';
+          msg.innerHTML='At <b>neostigmine target 0.05 mg/kg</b> & <b>glycopyrrolate 0.01 mg/kg</b> → draw about <b>'+ (Math.round(v*100)/100) +' mL</b> total (IBW '+(Math.round(kg*10)/10)+' kg). Adjust by TOF.';
+          div.appendChild(msg);
+        }
+      }
+      host.appendChild(div);
+    });
+  }
+
+  function renderPedsSyr(d){
+    var host=$('ped_syr_list'); host.innerHTML='';
+    var relaxSel=$('peds_relaxant').value || 'vecuronium';
+    var base=PEDS_PRESETS.slice(0,6).concat(
+      relaxSel==='vecuronium' ? [{label:"Vecuronium",alias:"vecuronium",unit:"mg",stock_conc:10,use_ml:10,total_ml:10,note:"Powder 10 mg + 10 mL NS → 1 mg/mL", dose:{min:0.08,max:0.1,unit:'mg/kg',basis:'IBW'}}]
+                               : [{label:"Atracurium",alias:"atracurium",unit:"mg",stock_conc:10,use_ml:2.5,total_ml:10,note:"2.5 mL of 10 mg/mL → 2.5 mg/mL", dose:{min:0.5,max:0.5,unit:'mg/kg',basis:'TBW'}}]
+    ).concat(PEDS_PRESETS.slice(6));
+
+    base.forEach(function(p){
+      var div=document.createElement('div'); div.className='item';
+      div.innerHTML='<b>'+p.label+'</b>' + (p.note?('<div class="small">'+p.note+'</div>'):'');
+      if(!p.is_mix){
+        var conc=(p.stock_conc*p.use_ml)/p.total_ml;
+        var total=p.stock_conc*p.use_ml;
+        var concLine=document.createElement('div'); concLine.className='small';
+        concLine.textContent='Final: '+(Math.round(conc*1000)/1000)+' '+p.unit+'/mL • Total in syringe: '+(Math.round(total*10)/10)+' '+p.unit;
+        div.appendChild(concLine);
+        if(p.dose){
+          var kg = d.weightKg||0;
+          var minU=kg*p.dose.min, maxU=kg*p.dose.max;
+          var volPref = (p.dose.unit==='mcg/kg')? (maxU/(conc*1000)) : (maxU/conc);
+          var volMin=(p.dose.unit==='mcg/kg')? (minU/(conc*1000)) : (minU/conc);
+          var std=document.createElement('div'); std.className='small'; std.textContent='Std: '+p.dose.min+'–'+p.dose.max+' '+p.dose.unit+' (basis '+(p.dose.basis||'TBW')+').';
+          var act=document.createElement('div'); act.style.marginTop='6px';
+          act.innerHTML='<div class="pill"><b>Give ~'+(Math.round(volPref*100)/100)+' mL</b> (upper end). Range: '+(Math.round(volMin*100)/100)+'–'+(Math.round(volPref*100)/100)+' mL.</div>';
+          div.appendChild(std); div.appendChild(act);
+        }
+      } else {
+        var parts=p.parts||[];
+        if(p.alias==='rev_peds'){
+          var kg = d.weightKg||0; var neoNeed=0.05*kg; var glyNeed=0.01*kg;
+          var mlNeo = neoNeed/0.5; var mlGly = glyNeed/0.2; var mlNS = Math.max(0, 10 - mlNeo - mlGly);
+          var warn = '';
+          if(mlNeo + mlGly > 10){ warn = '<div class="warnbox" style="margin-top:6px">The required dose exceeds 10 mL even before NS (total '+(Math.round((mlNeo+mlGly)*100)/100)+' mL). Prepare a larger syringe (e.g., 20 mL) keeping the same proportions, or divide into two syringes.</div>'; mlNS=0; }
+          var s=document.createElement('div'); s.className='small';
+          s.innerHTML='<b>Personalized 10 mL recipe</b> (equals full dose for this patient):<br>'+
+                      'Neostigmine: <b>'+ (Math.round(mlNeo*100)/100) +' mL</b> (0.5 mg/mL)<br>'+
+                      'Glycopyrrolate: <b>'+ (Math.round(mlGly*100)/100) +' mL</b> (0.2 mg/mL)<br>'+
+                      'NS: <b>'+ (Math.round(mlNS*100)/100) +' mL</b> to make 10 mL.<br>'+
+                      'Per mL after mixing → neo '+(Math.round((neoNeed/10)*1000)/1000)+' mg/mL; glyco '+(Math.round((glyNeed/10)*1000)/1000)+' mg/mL.';
+          div.appendChild(s);
+          if(warn) div.insertAdjacentHTML('beforeend', warn);
+        } else {
+          var details=parts.map(function(pp){ return pp.alias+': '+(Math.round((pp.conc*pp.ml/p.total_ml)*1000)/1000)+' '+pp.unit+'/mL'; }).join('; ');
+          var s=document.createElement('div'); s.className='small'; s.textContent='Final per mL → '+details; div.appendChild(s);
+        }
+      }
+      host.appendChild(div);
+    });
+  }
+</script>
+
+<script>
+  // Drug doses reference (unchanged essentials)
+  var REF = [
+    {group:"Induction", items:[
+      {name:"Propofol", adult:"1.5–2.5 mg/kg (LBW if obese)", peds:"2–3 mg/kg", notes:"Reduce in elderly/ASA III–IV."},
+      {name:"Ketamine", adult:"1–2 mg/kg IV", peds:"1–2 mg/kg IV (4–6 mg/kg IM)", notes:"Bronchodilation; ↑secretions."},
+      {name:"Thiopentone", adult:"3–5 mg/kg", peds:"5–6 mg/kg", notes:"Avoid in porphyria."}
+    ]},
+    {group:"Opioids", items:[
+      {name:"Fentanyl", adult:"1–2 mcg/kg", peds:"1–2 mcg/kg", notes:"Titrate to effect."}
+    ]},
+    {group:"Neuromuscular Blockers", items:[
+      {name:"Vecuronium", adult:"0.08–0.1 mg/kg (IBW)", peds:"0.1 mg/kg (IBW)", notes:"Maintenance 0.02–0.05 mg/kg."},
+      {name:"Atracurium", adult:"0.5 mg/kg (TBW)", peds:"0.5 mg/kg", notes:"Maintenance 0.08–0.1 mg/kg."},
+      {name:"Succinylcholine", adult:"1–1.5 mg/kg", peds:"1–2 mg/kg", notes:"Bradycardia risk; consider atropine."}
+    ]},
+    {group:"Reversal", items:[
+      {name:"Neostigmine + Glycopyrrolate", adult:"Neo 0.04–0.07 mg/kg + Glyco 0.01 mg/kg", peds:"Same per kg", notes:"Dose by TOF."}
+    ]},
+    {group:"Anticholinergics", items:[
+      {name:"Atropine", adult:"0.5–1 mg IV q3–5 min (max 3 mg)", peds:"0.02 mg/kg (max 0.5 mg)", notes:"Bradycardia."},
+      {name:"Glycopyrrolate", adult:"0.2 mg IV (with neo)", peds:"0.01 mg/kg", notes:"Antisialagogue."}
+    ]}
+  ];
+  function renderRef(){
+    var host=$('ref_doses'); host.innerHTML='';
+    REF.forEach(function(sec){
+      var card=document.createElement('div'); card.className='card'; card.style.marginBottom='10px';
+      card.innerHTML='<div class="hd">'+sec.group+'</div><div class="bd"></div>';
+      var bd=card.querySelector('.bd');
+      sec.items.forEach(function(it){
+        var row=document.createElement('div'); row.className='item'; row.style.marginBottom='8px';
+        row.innerHTML='<b>'+it.name+'</b><div class="small">Adult: '+it.adult+' • Peds: '+it.peds+'</div><div class="small">'+(it.notes||'')+'</div>';
+        bd.appendChild(row);
+      });
+      host.appendChild(card);
+    });
+  }
+</script>
+
+<script>
+  // Airway, Fluids, LA, MAC
+  function nearestHalf(x){ return Math.round(x*2)/2; }
+  function lmaByWeight(kg){ if(!kg)return '-'; if(kg<5)return 1; if(kg<10)return 1.5; if(kg<20)return 2; if(kg<30)return 2.5; if(kg<50)return 3; if(kg<70)return 4; if(kg<=100)return 5; return 6; }
+  function renderAirway(d){
+    var age=toNum(state.age); var adult=age>=12;
+    document.getElementById('air_adult').style.display = adult? 'block':'none';
+    document.getElementById('air_ped').style.display = adult? 'none':'block';
+    var idForDepth, adultTxt=''; if(adult){ adultTxt=(state.sex==='male')?'7.5 (7.0–8.0)':'7.0 (6.5–7.5)'; document.getElementById('adult_id').textContent=adultTxt; idForDepth=(state.sex==='male')?7.5:7.0; } else { var cuff=age?nearestHalf((age/4)+3.5):'-', unc=age?nearestHalf((age/4)+4.0):'-'; document.getElementById('cuffed_id').textContent=cuff; document.getElementById('uncuffed_id').textContent=unc; idForDepth=age?cuff:6.5; }
+    document.getElementById('depth_lip').textContent=idForDepth?Math.round(idForDepth*3*10)/10:'-'; document.getElementById('depth_nasal').textContent=idForDepth?Math.round(idForDepth*3.5*10)/10:'-'; document.getElementById('depth_alt_age').textContent=age?Math.round((10+age/2)*10)/10:'-';
+    document.getElementById('lma_sz').textContent=lmaByWeight(d.weightKg);
+    var ett=toNum(document.getElementById('suct_ett').value||idForDepth||7.0); var pop=document.getElementById('suct_pop').value|| (adult?'adult':'peds'); var limit=(pop==='adult')?0.7:0.5; var maxFr=Math.floor((limit*ett)/0.33);
+    var choices=[6,8,10,12,14,16,18,20].filter(function(f){return f<=maxFr;}).slice(-2);
+    document.getElementById('suct_out').textContent = maxFr? (choices.join(' or ')+' Fr (max ~'+maxFr+' Fr)'):'-';
+  }
+  function maintenance421(kg){ if(!kg)return 0; var a=Math.min(kg,10)*4; var b=Math.min(Math.max(kg-10,0),10)*2; var c=Math.max(kg-20,0)*1; return a+b+c; }
+  function ebvByCategory(age,sex){ if(age<0.083)return 90; if(age<1)return 80; if(age<12)return 75; return sex==='female'?65:70; }
+  function renderFluids(d){ var maint=maintenance421(d.weightKg); document.getElementById('maint_rate').textContent=Math.round(maint); document.getElementById('deficit_ml').textContent=(Math.round(maint*toNum(state.npo||0)*10)/10)+' mL'; var ebvkg=ebvByCategory(toNum(state.age),state.sex); var ebvTotal=Math.round(d.weightKg*ebvkg); document.getElementById('ebv_perkg').textContent=ebvkg; document.getElementById('ebv_total').textContent=ebvTotal; var hbStart=toNum(state.hbStart), hbMin=toNum(state.hbMin), hbAvg=(hbStart+hbMin)/2 || 1; document.getElementById('abl').textContent=Math.round(ebvTotal*(hbStart-hbMin)/hbAvg)||0; }
+  function renderLA(d){
+    var grid=document.getElementById('la_grid'); grid.innerHTML=''; var basisTxt=state.weightBasis; document.getElementById('la_basis').textContent=basisTxt; var kg = (state.weightBasis==='IBW')?(d.ibw||d.weightKg):(state.weightBasis==='LBW'?(d.lbw||d.weightKg):d.weightKg);
+    var group=[
+      {name:"Lidocaine (plain)",alias:"lidocaine",maxOnlyMgKg:4.5,totalCap:300,defaultConc:10,notes:"Max 4.5 mg/kg (no epi), cap ~300 mg."},
+      {name:"Lidocaine (+epi)",alias:"lidocaine-epi",maxOnlyMgKg:7,totalCap:500,defaultConc:10,notes:"Max 7 mg/kg (with epi), cap ~500 mg."},
+      {name:"Bupivacaine",alias:"bupivacaine",maxOnlyMgKg:2.5,totalCap:175,defaultConc:5,notes:"Max 2.5 mg/kg (cap ~175 mg). With epi: 3 mg/kg (cap ~225 mg)."},
+      {name:"Ropivacaine",alias:"ropivacaine",maxOnlyMgKg:3,totalCap:null,defaultConc:7.5,notes:"Max 3 mg/kg (conservative)."},
+      {name:"Prilocaine",alias:"prilocaine",maxOnlyMgKg:6,totalCap:null,defaultConc:20,notes:"Max 6 mg/kg."}
+    ];
+    group.forEach(function(a){ var maxMg=Math.round(a.maxOnlyMgKg*kg*10)/10; var conc=a.defaultConc; var vol=conc?Math.round((maxMg/conc)*10)/10:'-'; var cap=a.totalCap?('; cap ~'+a.totalCap+' mg'):''; var el=document.createElement('div'); el.className='item'; el.innerHTML='<b>'+a.name+'</b><div class="small">'+a.notes+'</div><div style="margin-top:6px">Max: <b>'+maxMg+' mg</b>'+cap+'</div><div class="small">Volume limit: '+vol+' mL @ '+conc+' mg/mL</div>'; grid.appendChild(el); });
+  }
+  function renderMAC(){ var t=document.getElementById('mac_table'); t.innerHTML=''; var rows=[{agent:'Sevoflurane',adult:'~2.0%','60':'~1.7%',child:'~2.5%',infant:'~3.2%',neonate:'~3.3%'},{agent:'Desflurane',adult:'~6.0%','60':'~5.2%',child:'~7.2%',infant:'–',neonate:'–'},{agent:'Isoflurane',adult:'~1.15%','60':'~1.0%',child:'~1.6%',infant:'–',neonate:'–'}];
+    rows.forEach(function(r){ var tr=document.createElement('tr'); tr.innerHTML='<td>'+r.agent+'</td><td>'+r.adult+'</td><td>'+r["60"]+'</td><td>'+r.child+'</td><td>'+r.infant+'</td><td>'+r.neonate+'</td>'; t.appendChild(tr); });
+  }
+</script>
+
+<script>
+  // Paracetamol, Emergency, Spinal/Epidural, Infusions, Insulin, Custom (same as v1.3.5 except minor text)
+  function parseMix(s){ var m=String(s||'').match(/([\d\.]+)\s*in\s*([\d\.]+)/i); if(!m) return [0,0]; return [parseFloat(m[1]), parseFloat(m[2])]; }
+  function renderPCM(d){
+    var out=document.getElementById('pcm_out'); out.innerHTML=''; var route=document.getElementById('pcm_route').value; var plan=document.getElementById('pcm_plan').value; var sizes=((document.getElementById('pcm_sizes')||{value:'80,125,170,250,500'}).value).split(',').map(function(x){return Number(x.trim());}).filter(Boolean).sort(function(a,b){return a-b;});
+    function pickSupp(mgNeeded){ var best=sizes[0]; for(var i=0;i<sizes.length;i++){ if(sizes[i]<=mgNeeded) best=sizes[i]; } var over=sizes.find(function(s){return s>=mgNeeded;}); if(over && (over-mgNeeded)<(mgNeeded-best)) best=over; return best; }
+    var kg=d.weightKg||0; if(plan==='adult'){ out.innerHTML='<div><b>Adult</b>: 1 g per dose (max 4 g/day).</div>'+ (route==='rectal'? '<div>Suppository suggestion: choose combination to total ~1000 mg (e.g., 500+500).</div>':''); }
+    else if(plan==='peds_rectal'){ var loadMin=30*kg, loadMax=40*kg, maint=15*kg, maxDay=60*kg; var targ=loadMax; var supp=pickSupp(targ); out.innerHTML='<div><b>Pediatric rectal</b>: load '+Math.round(loadMin)+'–'+Math.round(loadMax)+' mg; then '+Math.round(maint)+' mg q6h (max '+Math.round(maxDay)+' mg/day). Uses <b>upper end</b> by default.</div>'+ (route==='rectal'? '<div>Example load ~'+Math.round(targ)+' mg → '+supp+' mg × '+max(1,Math.round(targ/supp))+'.</div>':''); } 
+    else { var custom=toNum(document.getElementById('pcm_custom').value); if(custom>0){ var dose=custom*kg; var ss=route==='rectal'? (' Suppository ~'+pickSupp(dose)+' mg × '+Math.max(1,Math.round(dose/pickSupp(dose)))+'.') : ''; out.innerHTML='<div><b>Custom</b>: '+custom+' mg/kg → '+Math.round(dose)+' mg.</div><div>'+ss+'</div>'; } else { out.textContent='Enter a custom mg/kg.'; } }
+  }
+  function renderEmerg(d){ var scn=document.getElementById('em_scn').value; var kg=d.weightKg||70; var adult=(toNum(state.age)>=12); var html=''; if(scn==='ana_anaph'){ html='<b>Adrenaline IM</b>: '+(adult?'0.3–0.5 mg IM (1:1000)':(0.01*kg)+' mg IM (max 0.5 mg)')+'.'; } else if(scn==='ca_adult'){ html='<b>Adrenaline IV</b>: 1 mg every 3–5 min (1:10,000).'; } else if(scn==='ca_peds'){ var mg=Math.round(0.01*kg*1000)/1000; html='<b>Adrenaline IV</b>: 0.01 mg/kg → '+mg+' mg = '+Math.round((mg/0.1)*100)/100+' mL of 1:10,000.'; } else if(scn==='brady'){ html='<b>Atropine</b>: '+(adult?'0.5–1 mg IV q3–5 min (max 3 mg)':(0.02*kg)+' mg IV (max 0.5 mg)')+'.'; } else if(scn==='amio'){ html='<b>Amiodarone</b>: 300 mg IV (then 150 mg if needed).'; } else if(scn==='bicarb'){ html='<b>Sodium bicarb 8.4%</b>: ~1 mL/kg slow IV for severe hyperK/tox per protocol → ~'+Math.round(kg)+' mL.'; } document.getElementById('em_out').innerHTML=html; }
+  var PRESET_INF=[{name:'Noradrenaline', mix:'4 in 50', target:'mcgkgmin', range:[0.02,0.2]},{name:'Adrenaline', mix:'4 in 50', target:'mcgkgmin', range:[0.02,0.2]},{name:'Phenylephrine', mix:'10 in 100', target:'mcgkgmin', range:[0.1,1]},{name:'Dopamine', mix:'200 in 50', target:'mcgkgmin', range:[2,20]},{name:'Dobutamine', mix:'250 in 50', target:'mcgkgmin', range:[2,20]},{name:'Nitroglycerin', mix:'50 in 50', target:'mcghr', range:[5,200]},{name:'Dexmedetomidine', mix:'200 mcg in 50', target:'mcgkgmin', range:[0.002,0.012]},{name:'Propofol (sedation)', mix:'1000 in 100', target:'mcgkgmin', range:[0.25,1.5]},{name:'Epidural: Ropivacaine 0.2%', mix:'200 mg in 100', target:'mlhr', range:[5,10]}];
+  function mgmlFromMix(mix){ var s=String(mix).toLowerCase(); var isMcg = s.includes('mcg'); var nums = s.replace(/[^\d\. ]/g,'').split(/\s+/).filter(Boolean); if(nums.length<2) return 0; var x=parseFloat(nums[0]), y=parseFloat(nums[1]); if(isMcg) return (x/1000)/y; return x/y; }
+  function renderInfusions(d){ var host=document.getElementById('inf_list'); host.innerHTML=''; PRESET_INF.forEach(function(p){ var div=document.createElement('div'); div.className='item'; var mgml=mgmlFromMix(p.mix); var kg=d.weightKg||70; var desc='<b>'+p.name+'</b> — mix '+p.mix+'. '; if(p.target==='mcgkgmin'){ var r1=p.range[0], r2=p.range[1]; var mlmin1=(kg*r1)/(mgml*1000), mlmin2=(kg*r2)/(mgml*1000); desc+='Typical '+r1+'–'+r2+' mcg/kg/min → <b>'+Math.round(mlmin1*60*100)/100+'–'+Math.round(mlmin2*60*100)/100+' mL/h</b>.'; } else if(p.target==='mcghr'){ var a=p.range[0], b=p.range[1]; var mlh1=(a/(mgml*1000)), mlh2=(b/(mgml*1000)); desc+='Typical '+a+'–'+b+' mcg/h → <b>'+Math.round(mlh1*100)/100+'–'+Math.round(mlh2*100)/100+' mL/h</b>.'; } else if(p.target==='mlhr'){ desc+='Run at <b>'+p.range[0]+'–'+p.range[1]+' mL/h</b>.'; } div.innerHTML=desc; host.appendChild(div); }); var mix=document.getElementById('inf_mix').value||'4 in 50'; var mgml=mgmlFromMix(mix); var tgt=document.getElementById('inf_target').value; var rate=toNum(document.getElementById('inf_rate').value||0); var kg=d.weightKg||70; var out=''; if(tgt==='mcgkgmin'){ var mlmin=(kg*rate)/(mgml*1000); out=Math.round(mlmin*60*100)/100+' mL/h'; } else if(tgt==='mcghr'){ var mlh=(rate)/(mgml*1000); out=Math.round(mlh*100)/100+' mL/h'; } else if(tgt==='mgmin'){ var mlmin2=(rate)/(mgml); out=Math.round(mlmin2*60*100)/100+' mL/h'; } else if(tgt==='units_hr'){ var parts=parseMix(mix); var perMl=parts[0]/parts[1]; var mlh= rate / perMl; out=Math.round(mlh*100)/100+' mL/h'; } document.getElementById('inf_out').innerHTML='<b>'+ (document.getElementById('inf_name').value||'Custom') +':</b> '+out+' (mix '+mix+').'; }
+  function insulinScenarioPlan(d){ var tddkg=parseFloat(document.getElementById('ins_tdd').value||0.4); var scn=document.getElementById('ins_scn').value; var lines=[]; if(scn==='t2dm_opd'){ lines.push('Basal‑bolus: TDD '+tddkg+' U/kg (adjust to A1c/hypo risk).'); } else if(scn==='t2dm_npo'){ lines.push('Pre‑op NPO: continue 50–80% basal; hold prandial; consider IV insulin for major surgery.'); } else if(scn==='t1dm'){ lines.push('Type 1: must have basal insulin; 0.3–0.5 U/kg/day split basal‑bolus.'); } else if(scn==='dka'){ lines.push('DKA/HHS: follow IV regular insulin protocol; transition to basal when resolved.'); } else if(scn==='preg'){ lines.push('Pregnancy: tighter targets; prefer basal‑bolus with rapid‑acting at meals.'); } else if(scn==='renal'){ lines.push('Elderly/renal/hepatic: start 0.2–0.3 U/kg/day and titrate carefully.'); } return lines; }
+  function renderInsulin(d){ var kg=d.weightKg||70; var tddkg=parseFloat(document.getElementById('ins_tdd').value||0.4); var tddAbs=toNum(document.getElementById('ins_tdd_abs').value)||Math.round(kg*tddkg*10)/10; document.getElementById('ins_plan').innerHTML=insulinScenarioPlan(d).map(function(s){return '<div>'+s+'</div>';}).join(''); var basalFrac=toNum(document.getElementById('ins_basal_frac').value||0.5); var meals=Math.max(1,toNum(document.getElementById('ins_meals').value||3)); var basal=Math.round(tddAbs*basalFrac*10)/10; var prandial=Math.round(((tddAbs-basal)/meals)*10)/10; document.getElementById('ins_split').innerHTML='<div><b>Split</b>: Basal ~<b>'+basal+' U</b>; Prandial ~<b>'+prandial+' U</b> before '+meals+' meals.</div>'; var recipe=document.getElementById('ins_recipe').value; var mix=(recipe==='50u50ml')?'50 in 50':(recipe==='100u100ml')?'100 in 100':(document.getElementById('ins_custom_mix').value||'50 in 50'); var parts=parseMix(mix); var perMl=(parts[0]&&parts[1])?(parts[0]/parts[1]):1; var unitsHr=toNum(document.getElementById('ins_units_hr').value||0); document.getElementById('ins_iv_out').innerHTML='Mix '+mix+' → '+(Math.round(perMl*1000)/1000)+' U/mL. Run <b>'+ (Math.round((unitsHr/perMl)*100)/100) +' mL/h</b> for '+unitsHr+' U/h.'; }
+  function renderCustom(d){ var basis=document.getElementById('cust_basis').value; var wt=(basis==='IBW')?(d.ibw||d.weightKg):(basis==='LBW'?(d.lbw||d.weightKg):d.weightKg); if(!wt||!isFinite(wt)||wt<=0)wt=d.weightKg; document.getElementById('cust_wt').textContent=Math.round(wt*100)/100; var name=document.getElementById('cust_name').value.trim(); var unit=document.getElementById('cust_unit').value; var minT=Math.round((wt*toNum(document.getElementById('cust_min').value))*1000)/1000; var maxT=Math.round((wt*toNum(document.getElementById('cust_max').value))*1000)/1000; var conc=toNum(document.getElementById('cust_conc').value); var volTxt=conc?(' (→ '+Math.round((minT/conc)*100)/100+' – '+Math.round((maxT/conc)*100)/100+' mL @ '+conc+' '+unit+'/mL)'):''; var out=document.getElementById('cust_output'); if(!name){ out.textContent='Fill the fields above to calculate a personalized range.'; return; } if(document.getElementById('cust_inf').checked){ out.innerHTML='<div><b>'+name+'</b></div><div>Rate: <b>'+minT+' – '+maxT+' '+unit+'/h</b>'+volTxt+'</div>'; } else { out.innerHTML='<div><b>'+name+'</b></div><div>Dose: <b>'+minT+' – '+maxT+' '+unit+'</b>'+volTxt+'</div>'; } }
+</script>
+
+<script>
+  // Guards
+  function applyGuards(){
+    var age=Number(state.age);
+    var aGuard=document.getElementById('adult_guard');
+    var pGuard=document.getElementById('peds_guard');
+    var adultOK = (age>=12 || !age);
+    var pedsOK = (age<12 || !age);
+    document.getElementById('adult_syr_list').style.display = adultOK? 'grid':'none';
+    aGuard.textContent = adultOK? '' : 'Disabled for pediatric patient';
+    document.getElementById('ped_syr_list').style.display = pedsOK? 'grid':'none';
+    pGuard.textContent = pedsOK? '' : 'Disabled for adult patient';
+  }
+</script>
+
+<script>
+  // Bind & renderAll
+  function setHeightMode(u){
+    $('h_cm_wrap').style.display = (u==='cm')?'block':'none';
+    $('h_in_wrap').style.display = (u==='in')?'block':'none';
+    $('h_ftin_wrap').style.display = (u==='ftin')?'block':'none';
+  }
+  function bindInputs(){
+    $('age').oninput=function(e){ state.age=e.target.value; saveState(); renderAll(); };
+    $('weight').oninput=function(e){ state.weight=e.target.value; saveState(); renderAll(); };
+
+    $('height_unit').onchange=function(e){ state.heightUnit=e.target.value; saveState(); setHeightMode(state.heightUnit); renderAll(); };
+    $('height_cm').oninput=function(e){ state.heightCm=e.target.value; saveState(); renderAll(); };
+    $('height_in').oninput=function(e){ state.heightIn=e.target.value; saveState(); renderAll(); };
+    $('height_ft').oninput=function(e){ state.heightFt=e.target.value; saveState(); renderAll(); };
+    $('height_in2').oninput=function(e){ state.heightIn2=e.target.value; saveState(); renderAll(); };
+
+    $('sex').onchange=function(e){ state.sex=e.target.value; saveState(); renderAll(); };
+    $('weightBasis').onchange=function(e){ state.weightBasis=e.target.value; saveState(); renderAll(); };
+
+    $('suct_ett').oninput=function(){ renderAirway(derive()); };
+    $('suct_pop').onchange=function(){ renderAirway(derive()); };
+
+    $('npo_hrs').oninput=function(e){ state.npo=e.target.value; saveState(); renderAll(); };
+    $('hb_start').oninput=function(e){ state.hbStart=e.target.value; saveState(); renderAll(); };
+    $('hb_min').oninput=function(e){ state.hbMin=e.target.value; saveState(); renderAll(); };
+
+    $('pcm_route').onchange=function(){ renderPCM(derive()); };
+    $('pcm_plan').onchange=function(){ renderPCM(derive()); };
+    $('pcm_sizes').oninput=function(){ renderPCM(derive()); };
+    $('pcm_custom').oninput=function(){ renderPCM(derive()); };
+
+    $('em_scn').onchange=function(){ renderEmerg(derive()); };
+
+    $('sp_agent').onchange=function(){ renderSpinal(derive()); };
+    $('sp_ml').oninput=function(){ renderSpinal(derive()); };
+    $('sp_adj').onchange=function(){ renderSpinal(derive()); };
+    $('sp_preset').onchange=function(){ renderSpinal(derive()); };
+    $('ep_ctx').onchange=function(){ renderEpidural(derive()); };
+    $('ep_vol').oninput=function(){ renderEpidural(derive()); };
+
+    $('inf_name').oninput=function(){ renderInfusions(derive()); };
+    $('inf_mix').oninput=function(){ renderInfusions(derive()); };
+    $('inf_target').onchange=function(){ renderInfusions(derive()); };
+    $('inf_rate').oninput=function(){ renderInfusions(derive()); };
+
+    $('ins_scn').onchange=function(){ renderInsulin(derive()); };
+    $('ins_tdd').onchange=function(){ renderInsulin(derive()); };
+    $('ins_tdd_abs').oninput=function(){ renderInsulin(derive()); };
+    $('ins_basal_frac').oninput=function(){ renderInsulin(derive()); };
+    $('ins_meals').oninput=function(){ renderInsulin(derive()); };
+    $('ins_recipe').onchange=function(){ renderInsulin(derive()); };
+    $('ins_custom_mix').oninput=function(){ renderInsulin(derive()); };
+    $('ins_units_hr').oninput=function(){ renderInsulin(derive()); };
+
+    $('cust_name').oninput=function(){ renderCustom(derive()); };
+    $('cust_unit').onchange=function(){ renderCustom(derive()); };
+    $('cust_basis').onchange=function(){ renderCustom(derive()); };
+    $('cust_min').oninput=function(){ renderCustom(derive()); };
+    $('cust_max').oninput=function(){ renderCustom(derive()); };
+    $('cust_conc').oninput=function(){ renderCustom(derive()); };
+
+    $('adult_relaxant').onchange=function(){ renderAdultSyr(derive()); };
+    $('peds_relaxant').onchange=function(){ renderPedsSyr(derive()); };
+  }
+
+  function renderSpinal(d){
+    var ml=Number($('sp_ml').value||0); var mgConc=5; var mg=Math.round(ml*mgConc*10)/10;
+    var adjSel=[].slice.call(($('sp_adj')||{selectedOptions:[]}).selectedOptions).map(function(o){return o.value;});
+    var adjuncts=[]; if(adjSel.indexOf('fent10')>=0) adjuncts.push('Fentanyl 10 mcg'); if(adjSel.indexOf('fent25')>=0) adjuncts.push('Fentanyl 25 mcg'); if(adjSel.indexOf('morph100')>=0) adjuncts.push('Morphine 100 mcg'); if(adjSel.indexOf('morph200')>=0) adjuncts.push('Morphine 200 mcg'); if(adjSel.indexOf('clon15')>=0) adjuncts.push('Clonidine 15 mcg'); if(adjSel.indexOf('clon30')>=0) adjuncts.push('Clonidine 30 mcg');
+    var preset=$('sp_preset').value; var lines=['<b>Dose:</b> '+ml+' mL ('+mg+' mg of 0.5%)']; if(adjuncts.length) lines.push('<b>Adjuncts:</b> '+adjuncts.join(', '));
+    if(preset==='cs') lines.push('Preset: Cesarean — heavy bupivacaine 10–12.5 mg + fentanyl 10–25 mcg ± morphine 100–200 mcg.');
+    if(preset==='le') lines.push('Preset: Lower limb — heavy bupivacaine 12–15 mg ± fentanyl 10–25 mcg.');
+    $('sp_out').innerHTML=lines.map(function(s){return '<div>'+s+'</div>';}).join('');
+  }
+  function renderEpidural(d){
+    var ctx=$('ep_ctx').value; var vol=Number($('ep_vol').value||0); var lines=[];
+    if(ctx==='test'){ lines.push('<b>Test dose</b>: Lido 1.5% + adrenaline 1:200,000, <b>3 mL</b>.'); }
+    if(ctx==='surg_topup'){ lines.push('<b>Surgical top‑up</b>: Bupivacaine 0.25–0.5% <b>5–10 mL</b> in increments.'); }
+    if(ctx==='labor_bupi'){ lines.push('<b>Labor</b>: Bupiv 0.0625–0.125% + fent 1–2 mcg/mL; bolus 8–10 mL, infusion 8–12 mL/h.'); }
+    if(ctx==='labor_ropi'){ lines.push('<b>Labor</b>: Ropiv 0.1–0.2% + fent 1–2 mcg/mL; bolus 8–10 mL, infusion 8–12 mL/h.'); }
+    if(ctx==='postop_ropi'){ lines.push('<b>Post‑op infusion</b>: Ropi 0.2% 5–10 mL/h (monitor motor block).'); }
+    if(vol) lines.push('Requested volume: '+vol+' mL — keep within LA max dose.');
+    $('ep_out').innerHTML=lines.map(function(s){return '<div>'+s+'</div>';}).join('');
+  }
+  function renderAll(){
+    var d=derive();
+    renderSummary(d); renderAdultSyr(d); renderPedsSyr(d); renderRef(); renderAirway(d); renderFluids(d); renderLA(d); renderMAC(); renderPCM(d); renderEmerg(d); renderSpinal(d); renderEpidural(d); renderInfusions(d); renderInsulin(d); renderCustom(d); applyGuards();
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    bindInputs(); setHeightMode(state.heightUnit||'cm'); renderAll(); setTimeout(function(){ var h=document.getElementById('inf_list'); if(h && !h.children.length){ try{ renderInfusions(derive()); }catch(e){} } }, 50);
+  });
+</script>
+
+<script>
+// (replaced by extended infusion list)
+(function(){
+  function ensureInfusions(){
+    var host = document.getElementById('inf_list'); if(!host) return;
+    if(host.children && host.children.length) return; // already populated by main logic
+    var data = [
+      {name:'Noradrenaline', mix:[4,50], units:'mg', rate_unit:'mcg/kg/min', typical:[0.02,0.2]},
+      {name:'Adrenaline', mix:[1,50], units:'mg', rate_unit:'mcg/kg/min', typical:[0.02,0.2]},
+      {name:'Dopamine', mix:[200,50], units:'mg', rate_unit:'mcg/kg/min', typical:[2,10]},
+      {name:'Insulin (Regular)', mix:[50,50], units:'units', rate_unit:'U/hr', typical:[1,10]},
+      {name:'Lidocaine', mix:[400,50], units:'mg', rate_unit:'mg/min', typical:[1,4]}
+    ];
+    host.innerHTML='';
+    data.forEach(function(meta){
+      var div=document.createElement('div'); div.className='item';
+      var mix = meta.mix[0]+' '+meta.units+' in '+meta.mix[1]+' mL';
+      function finalConc(meta){
+        if(meta.units==='mg') return Math.round((meta.mix[0]*1000/meta.mix[1])*10)/10 + ' mcg/mL';
+        if(meta.units==='units') return (meta.mix[0]/meta.mix[1]).toFixed(1) + ' U/mL';
+        return (meta.mix[0]/meta.mix[1]).toFixed(1) + ' mg/mL';
+      }
+      div.innerHTML = '<div><b>'+meta.name+'</b> — '+mix+'</div>' +
+                      '<div class="small">Final ≈ '+finalConc(meta)+'. Typical: '+meta.typical[0]+'–'+meta.typical[1]+' '+meta.rate_unit+'.</div>';
+      host.appendChild(div);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(ensureInfusions, 60);
+  });
+})();
+</script>
+
+
+<script>
+(function(){
+  function ensureInfusionsExtended(){
+    var host = document.getElementById('inf_list'); if(!host) return;
+    if(host.children && host.children.length) return; // already populated
+    var data = [
+      {name:'Noradrenaline', mix:[4,50], units:'mg', rate_unit:'mcg/kg/min', typical:[0.02,0.2]},
+      {name:'Adrenaline', mix:[1,50], units:'mg', rate_unit:'mcg/kg/min', typical:[0.02,0.2]},
+      {name:'Phenylephrine', mix:[10,100], units:'mg', rate_unit:'mcg/kg/min', typical:[0.2,1.0]},
+      {name:'Vasopressin', mix:[20,50], units:'units', rate_unit:'U/min', typical:[0.01,0.04]},
+      {name:'Dopamine', mix:[200,50], units:'mg', rate_unit:'mcg/kg/min', typical:[2,10]},
+      {name:'Dobutamine', mix:[250,50], units:'mg', rate_unit:'mcg/kg/min', typical:[2,20]},
+      {name:'Nitroglycerin', mix:[50,50], units:'mg', rate_unit:'mcg/min', typical:[5,200]},
+      {name:'Nitroprusside', mix:[50,50], units:'mg', rate_unit:'mcg/kg/min', typical:[0.3,10]},
+      {name:'Dexmedetomidine', mix:[200,50], units:'mcg', rate_unit:'mcg/kg/h', typical:[0.2,0.7]},
+      {name:'Propofol (infusion)', mix:[1000,100], units:'mg', rate_unit:'mcg/kg/min', typical:[25,150]},
+      {name:'Remifentanil', mix:[2,50], units:'mg', rate_unit:'mcg/kg/min', typical:[0.05,2]},
+      {name:'Ketamine', mix:[100,50], units:'mg', rate_unit:'mg/kg/h', typical:[0.05,0.4]},
+      {name:'Magnesium sulfate', mix:[4000,50], units:'mg', rate_unit:'g/h', typical:[1,2]},
+      {name:'Epidural: Bupivacaine 0.1% + Fentanyl 2 mcg/mL', mix:[0,0], units:'', rate_unit:'mL/h', typical:[6,12]},
+      {name:'Epidural: Ropivacaine 0.2%', mix:[0,0], units:'', rate_unit:'mL/h', typical:[6,12]}
+    ];
+    host.innerHTML='';
+    function finalConc(meta){
+      if(meta.units==='mg') return Math.round((meta.mix[0]*1000/meta.mix[1])*10)/10 + ' mcg/mL';
+      if(meta.units==='units') return (meta.mix[0]/meta.mix[1]).toFixed(2) + ' U/mL';
+      if(meta.units==='mcg') return (meta.mix[0]/meta.mix[1]).toFixed(1) + ' mcg/mL';
+      if(meta.units==='') return '—';
+      return (meta.mix[0]/meta.mix[1]).toFixed(2) + ' mg/mL';
+    }
+    data.forEach(function(meta){
+      var div=document.createElement('div'); div.className='item';
+      var mixTxt = (meta.units===''?'ready-to-use / per protocol':(meta.mix[0]+' '+meta.units+' in '+meta.mix[1]+' mL'));
+      var conc = finalConc(meta);
+      var typical = meta.typical[0]+'–'+meta.typical[1]+' '+meta.rate_unit;
+      div.innerHTML = '<div><b>'+meta.name+'</b> — '+mixTxt+'</div>' +
+                      '<div class="small">Final: '+conc+'. Typical: '+typical+'. Verify with your protocol.</div>';
+      host.appendChild(div);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(ensureInfusionsExtended, 80); });
+})();
+</script>
+
+</body>
+</html>

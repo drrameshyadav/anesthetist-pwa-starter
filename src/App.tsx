@@ -16,9 +16,18 @@ export default function App() {
             <h1 className="text-lg font-semibold">Anesthetist App (PWA)</h1>
             <p className="text-xs text-gray-500 -mt-0.5">Offline-ready • Add to Home Screen</p>
           </div>
-          <div className="ml-auto">
-            <InstallPrompt />
-          </div>
+          <div className="ml-auto flex items-center gap-2">
+  <a
+    href="/legacy.html"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="px-3 py-2 border rounded-xl hover:bg-gray-50"
+    title="Open your original Toolkit (static HTML)"
+  >
+    Open Legacy Toolkit
+  </a>
+  <InstallPrompt />
+</div>
         </div>
       </header>
 
