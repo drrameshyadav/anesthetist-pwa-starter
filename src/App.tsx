@@ -3,6 +3,8 @@ import { Brain, TimerReset, Syringe } from 'lucide-react'
 import Timer from './components/Timer'
 import InstallPrompt from './components/InstallPrompt'
 import LocalAnestheticCalc from './components/LocalAnestheticCalc'
+import PatientCard from './components/PatientCard'
+import RelaxantTimers from './components/RelaxantTimers'
 
 export default function App() {
   return (
@@ -17,23 +19,25 @@ export default function App() {
             <p className="text-xs text-gray-500 -mt-0.5">Offline-ready • Add to Home Screen</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
-  <a
-    href="/legacy.html"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="px-3 py-2 border rounded-xl hover:bg-gray-50"
-    title="Open your original Toolkit (static HTML)"
-  >
-    Open Legacy Toolkit
-  </a>
-  <InstallPrompt />
-</div>
+            <a
+              href="/legacy.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2 border rounded-xl hover:bg-gray-50"
+              title="Open your original Toolkit (static HTML)"
+            >
+              Open Legacy Toolkit
+            </a>
+            <InstallPrompt />
+          </div>
         </div>
       </header>
 
       <main className="flex-1">
         <section className="max-w-3xl mx-auto p-4">
           <div className="grid gap-4">
+            <PatientCard />
+
             <div className="rounded-2xl border bg-white shadow-sm">
               <div className="p-4 border-b flex items-center gap-2">
                 <TimerReset className="w-5 h-5 text-blue-600" />
@@ -43,6 +47,8 @@ export default function App() {
                 <Timer />
               </div>
             </div>
+
+            <RelaxantTimers />
 
             <div className="rounded-2xl border bg-white shadow-sm">
               <div className="p-4 border-b flex items-center gap-2">
@@ -59,7 +65,7 @@ export default function App() {
 
       <footer className="border-t bg-white">
         <div className="max-w-3xl mx-auto px-4 py-3 text-xs text-gray-500">
-          v0.1 • Data is stored locally on your device.
+          v0.2 • Data is stored locally on your device.
         </div>
       </footer>
     </div>
