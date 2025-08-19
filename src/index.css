@@ -1,2 +1,27 @@
-/* Ensure no side gutters on mobile */
-body { margin: 0; }
+/* Optional polish for the scroller and legacy iframe */
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.footer-note{
+  position: fixed;
+  bottom: 44px; /* sits just above the tab bar */
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 11px;
+  color: #6b7280; /* gray-500 */
+  padding: 4px 12px;
+}
+
+.legacy-wrap {
+  height: calc(100vh - 44px - 44px); /* viewport minus header and tabs */
+  margin: 0;
+  padding: 0;
+}
+
+.legacy-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: white;
+}
