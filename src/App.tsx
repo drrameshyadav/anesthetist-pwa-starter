@@ -15,11 +15,9 @@ function FooterNote(){
 
 export default function App(){
   const [tab, setTab] = useState<TabKey>('syringes')
-
   const [tbw, setTbw] = useState<number>(70)
   const [height, setHeight] = useState<number|undefined>(170)
   const [sex, setSex] = useState<Sex>('M')
-
   const ibw = ibwKg(height, sex, tbw)
   const lbw = lbwKg(height, sex, tbw)
 
@@ -47,9 +45,7 @@ export default function App(){
                 </select>
               </label>
             </div>
-            <div className="mt-3 text-sm text-gray-600">
-              <div>IBW ≈ <strong>{ibw} kg</strong> · LBW ≈ <strong>{lbw} kg</strong></div>
-            </div>
+            <div className="mt-3 text-sm text-gray-600">IBW ≈ <strong>{ibw} kg</strong> · LBW ≈ <strong>{lbw} kg</strong></div>
           </div>
         </section>
       )}
@@ -57,7 +53,6 @@ export default function App(){
       {tab === 'syringes' && <SyringeCards tbwKg={tbw} heightCm={height} sex={sex} />}
       {tab === 'timer' && <Timer />}
 
-      {/* Legacy-embedded sections to restore full functionality immediately */}
       {tab === 'doses' && <LegacySection />}
       {tab === 'ett' && <LegacySection />}
       {tab === 'la' && <LegacySection />}
