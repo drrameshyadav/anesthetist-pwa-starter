@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   build:
+    name: build (Node 20)   # 👈 this label appears in PR checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +21,7 @@ jobs:
       - run: npm run build
 
   e2e:
-    # optional: wait for build job to finish (not strictly required)
+    name: e2e (Chromium on Deploy Preview)  # 👈 optional, clearer label
     if: contains(github.event.pull_request.title, '[e2e]')
     needs: build
     runs-on: ubuntu-latest
@@ -29,12 +30,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Wait for the Netlify Deploy Preview URL for this PR
       - name: Wait for Netlify Deploy Preview
         id: wait
         uses: jakepartusch/wait-for-netlify-action@v1.4
         with:
-          site_name: "anesthesiacalculations"   # <-- your Netlify subdomain (before .netlify.app)
+          site_name: "anesthesiacalculations"
           max_timeout: 600
 
       - name: Resolve Preview URL (with fallback)
@@ -42,7 +42,6 @@ jobs:
         run: |
           URL="${{ steps.wait.outputs.url }}"
           if [ -z "$URL" ]; then
-            echo "No URL from wait step, constructing fallback…"
             echo "url=https://deploy-preview-${{ github.event.number }}--anesthesiacalculations.netlify.app/" >> "$GITHUB_OUTPUT"
           else
             echo "url=$URL" >> "$GITHUB_OUTPUT"
@@ -50,7 +49,7 @@ jobs:
           echo "Using preview URL:"
           cat $GITHUB_OUTPUT
 
-      - name: Setup Node
+      - name: Use Node 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
