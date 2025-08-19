@@ -1,9 +1,7 @@
 export type RelaxantDrug = 'atracurium' | 'vecuronium'
-export type RelaxantPhase = 'bolus' | 'maintenance'
-
 export const RELAXANT_EVENT = 'relaxant-give'
 
-/** Default maintenance windows (minutes). Tweak later if you wish. */
+/** Default maintenance windows (minutes) — adjust later if you like */
 export const RELAXANT_DEFAULT_MINUTES: Record<RelaxantDrug, number> = {
   atracurium: 20,
   vecuronium: 30,

@@ -1,5 +1,5 @@
 import React from 'react'
-import { STOCKS, SYRINGES, type Group, type Unit, type WeightBasis } from '../lib/syringes'
+import { STOCKS, SYRINGES, type Group, type Unit, type SyringeDef } from '../lib/syringes'
 import { ibwKg, lbwKg, type Sex } from '../lib/weights'
 import { triggerRelaxantGive } from '../lib/relaxant'
 
@@ -12,14 +12,14 @@ function useLS(key: string, initial: string = '') {
 function unitToMg(n: number, u: Unit) { return u === 'mcg' ? n / 1000 : n }
 function fmt(n: number, dp = 2) { return Number.isFinite(n) ? n.toFixed(dp).replace(/\.00$/, '') : '—' }
 
-function chooseWeight(basis: WeightBasis, tbw: number, ibw?: number, lbw?: number, fallback: number = tbw) {
-  if (basis === 'TBW') return tbw
-  if (basis === 'IBW') return ibw ?? fallback
-  if (basis === 'LBW') return lbw ?? fallback
-  return fallback
+function basisFor(s: SyringeDef, primaryDrugKey: string) {
+  if (s.doseConfig?.basis && s.doseConfig.basis !== 'AUTO') return s.doseConfig.basis
+  if (['fentanyl','propofol','ketamine','midazolam'].includes(primaryDrugKey)) return 'LBW'
+  if (['atracurium','vecuronium'].includes(primaryDrugKey)) return 'IBW'
+  return 'TBW' // sux, reversal/anticholinergics
 }
 
-/** mg/mL for dosing math */
+/** mg/mL for dosing math + return which drug drives dosing */
 function finalConcMgPerMl(s: (typeof SYRINGES)[number], vecuConc?: number): {mgPerMl: number, primaryDrugKey: string} {
   const finalVol = s.finalVolumeMl
   if (s.mode === 'target' && s.target) {
@@ -38,7 +38,9 @@ function finalConcMgPerMl(s: (typeof SYRINGES)[number], vecuConc?: number): {mgP
 
 export function SyringeCards() {
   const [tab, setTab] = React.useState<Group>('adult')
+  const [doseMap, setDoseMap] = React.useState<Record<string,string>>({})
 
+  // Patient info
   const [wStr] = useLS('patient.weight.kg', '')
   const [hStr] = useLS('patient.height.cm', '')
   const [sexStr] = useLS('patient.sex', '')
@@ -48,13 +50,14 @@ export function SyringeCards() {
   const ibw = h > 0 ? ibwKg(h, sex) : undefined
   const lbw = h > 0 ? lbwKg(tbw, h, sex) : undefined
 
+  // Vecuronium only: allow edit
   const [vecuConcStr, setVecuConcStr] = useLS('stock.vecuronium.mgml', String(STOCKS.vecuronium.mgPerMl))
   const vecuConc = Number(vecuConcStr) > 0 ? Number(vecuConcStr) : undefined
 
   const list = SYRINGES.filter(s => s.group === tab)
 
   return (
-    <section className="px-1 md:px-2">
+    <section className="px-0 md:px-0">
       <div className="mb-2 flex gap-2">
         <button className={`rounded-lg px-3 py-2 text-sm border ${tab==='adult'?'bg-blue-600 text-white':'bg-white'}`} onClick={() => setTab('adult')}>Adult</button>
         <button className={`rounded-lg px-3 py-2 text-sm border ${tab==='peds'?'bg-blue-600 text-white':'bg-white'}`} onClick={() => setTab('peds')}>Pediatric</button>
@@ -66,20 +69,15 @@ export function SyringeCards() {
         {list.map(s => {
           const { mgPerMl: finalC, primaryDrugKey } = finalConcMgPerMl(s, vecuConc)
 
-          // Auto weight-basis decision (same rule as before)
-          const basis: WeightBasis =
-            s.doseConfig?.basis === 'AUTO'
-              ? (['fentanyl','propofol','ketamine','midazolam'].includes(primaryDrugKey) ? 'LBW'
-                 : (['atracurium','vecuronium'].includes(primaryDrugKey) ? 'IBW' : 'TBW'))
-              : (s.doseConfig?.basis ?? 'TBW')
-          const weightUsed = chooseWeight(basis, tbw, ibw, lbw, tbw)
+          // Which weight to use?
+          const basis = basisFor(s, primaryDrugKey)
+          const weightUsed =
+            basis === 'IBW' ? (ibw ?? tbw) :
+            basis === 'LBW' ? (lbw ?? tbw) : tbw
 
-          // Per-kg dose
-          const [doseStr, setDoseStr] = React.useState<string>(String(s.doseConfig?.defaultPerKg ?? ''))
+          // Per-kg dose (managed outside the map to avoid hooks-in-loop crash)
+          const doseStr = doseMap[s.key] ?? String(s.doseConfig?.defaultPerKg ?? '')
           const range = s.doseConfig?.rangePerKg
-          const low = range?.[0]
-          const typical = s.doseConfig?.defaultPerKg
-          const high = range?.[1]
 
           // Calculate mL to administer
           let mlToGive: number | null = null
@@ -101,9 +99,12 @@ export function SyringeCards() {
                 <div>
                   <div className="text-base font-semibold">{s.label}</div>
                   <div className="text-xs text-gray-600">{s.group === 'adult' ? 'Adult' : 'Pediatric'}</div>
+                  {s.key==='adult_vecuronium' && (
+                    <div className="text-xs text-gray-700 mt-0.5">10 mg + NS→10 mL</div>
+                  )}
                 </div>
 
-                { (primaryDrugKey === 'vecuronium') && (
+                {(primaryDrugKey === 'vecuronium') && (
                   <div className="text-xs text-gray-600 text-right">
                     <div className="font-medium">Vecuronium conc (mg/mL)</div>
                     <input
@@ -134,44 +135,26 @@ export function SyringeCards() {
                     <label className="whitespace-nowrap">Dose:</label>
                     <input
                       type="number" inputMode="decimal" className="w-28 rounded border px-2 py-1 bg-white"
-                      value={doseStr} onChange={e => setDoseStr(e.target.value)}
+                      value={doseStr} onChange={e => setDoseMap(prev=>({ ...prev, [s.key]: e.target.value }))}
                     />
                     <span className="text-gray-600">{s.doseConfig.unitPerKg}/kg</span>
+                  </div>
 
-                    {/* Quick chips */}
-                    <div className="flex gap-1 ml-2">
-                      {typeof low==='number' && (
-                        <button className="rounded-full border px-2 py-0.5 text-xs" onClick={()=>setDoseStr(String(low))}>Low</button>
-                      )}
-                      {typeof typical==='number' && (
-                        <button className="rounded-full border px-2 py-0.5 text-xs" onClick={()=>setDoseStr(String(typical))}>Typical</button>
-                      )}
-                      {typeof high==='number' && (
-                        <button className="rounded-full border px-2 py-0.5 text-xs" onClick={()=>setDoseStr(String(high))}>High</button>
-                      )}
+                  {range && (
+                    <div className="mt-1 text-xs text-gray-600">
+                      Standard range: {range[0]}–{range[1]} {s.doseConfig.unitPerKg}/kg
                     </div>
-                  </div>
+                  )}
 
-                  <div className="mt-2 text-sm">
-                    Using weight = <span className="font-medium">{fmt(weightUsed,1)} kg</span>
-                    {mlToGive!=null ? (
-                      <div className="mt-1">
-                        Give <span className="font-semibold">{fmt(mlToGive,2)} mL</span>
-                      </div>
-                    ) : (
-                      <div className="mt-1 text-red-600">Enter a valid dose</div>
-                    )}
-                  </div>
-
-                  {/* Give button hooks the Relaxant Timer for atracurium/vecuronium */}
+                  {/* Hook: “Give” starts/refreshes Relaxant Timer for atracurium/vecuronium */}
                   {['atracurium','vecuronium'].includes(primaryDrugKey) && (
                     <div className="mt-3">
                       <button
-                        className="rounded-xl border px-3 py-2 bg-blue-600 text-white"
+                        className="rounded-lg border px-2 py-1 text-sm bg-blue-600 text-white"
                         onClick={() => triggerRelaxantGive(primaryDrugKey as any)}
                         disabled={mlToGive==null}
                       >
-                        Give now & start/refresh Relaxant Timer
+                        Give & start timer
                       </button>
                     </div>
                   )}
