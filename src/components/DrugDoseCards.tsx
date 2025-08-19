@@ -35,6 +35,7 @@ export function DrugDoseCards() {
   return (
     <section className="px-3 pb-6">
       <h2 className="text-xl font-semibold mb-3">Drug Dose Quick Calculator</h2>
+
       <div className="mb-4 flex items-center gap-3">
         <label className="text-sm font-medium">Weight (kg)</label>
         <input type="number" inputMode="decimal" className="w-28 rounded-lg border px-3 py-2"
@@ -52,14 +53,15 @@ export function DrugDoseCards() {
           return (
             <article key={d.key} className="rounded-2xl border bg-white p-3 shadow-sm">
               <div className="flex items-start justify-between gap-3">
-                <div><div className="text-base font-semibold">{d.label}</div>
-                     <div className="text-xs text-gray-600">{d.role}</div></div>
+                <div>
+                  <div className="text-base font-semibold">{d.label}</div>
+                  <div className="text-xs text-gray-600">{d.role}</div>
+                </div>
                 <div className="text-xs text-gray-600">
                   <div className="font-medium">Vial conc</div>
                   <div className="flex items-center gap-1 mt-1">
                     <input type="number" inputMode="decimal" className="w-20 rounded-lg border px-2 py-1 text-sm"
-                           value={c} step="0.1"
-                           onChange={e => setConc(v => ({ ...v, [d.key]: Number(e.target.value || 0) }))}/>
+                           value={c} step="0.1" onChange={e => setConc(v => ({ ...v, [d.key]: Number(e.target.value || 0) }))}/>
                     <span className="text-gray-500">mg/mL</span>
                   </div>
                 </div>
@@ -67,17 +69,12 @@ export function DrugDoseCards() {
 
               <div className="mt-2 text-sm">
                 <div className="text-gray-600">{txt.headline}</div>
-                <div className="mt-1"><span className="font-medium">Dose:</span> {txt.mgStr} &nbsp;(
-                  <span className="font-medium">≈</span> {txt.mlStr})</div>
+                <div className="mt-1"><span className="font-medium">Dose:</span> {txt.mgStr} &nbsp;(<span className="font-medium">≈</span> {txt.mlStr})</div>
                 {d.adultFixedNote && <div className="mt-1 text-xs text-gray-600">💡 {d.adultFixedNote}</div>}
                 {d.notes && <div className="mt-1 text-xs text-gray-600">{d.notes}</div>}
               </div>
 
               <div className="mt-2 flex gap-2">
-                <button className="rounded-lg bg-blue-600 px-3 py-2 text-white text-sm"
-                        onClick={() => { const line = `${d.label}: ${txt.mgStr} (≈ ${txt.mlStr} @ ${c} mg/mL)`; navigator.clipboard?.writeText?.(line) }}>
-                  Copy line
-                </button>
                 <button className="rounded-lg border px-3 py-2 text-sm"
                         onClick={() => setConc(v => ({ ...v, [d.key]: d.concDefaultMgPerMl }))}>
                   Reset conc
