@@ -1,74 +1,85 @@
-import React, { useState } from 'react'
-import TabsBar, { TabKey } from './components/TabsBar'
+import React from 'react'
+import { Brain, TimerReset, Syringe } from 'lucide-react'
 import Timer from './components/Timer'
-import SyringeCards from './components/SyringeCards'
-import LegacySection from './components/LegacySection'
-import { Sex, ibwKg, lbwKg } from './lib/patient'
+import InstallPrompt from './components/InstallPrompt'
+import LocalAnestheticCalc from './components/LocalAnestheticCalc'
+import PatientCard from './components/PatientCard'
+import RelaxantTimers from './components/RelaxantTimers'
+import QuickInfo from './components/QuickInfo'
+import { DrugDoseCards } from './components/DrugDoseCards'
+import { SyringeCards } from './components/SyringeCards'
 
-function FooterNote(){
+export default function App() {
   return (
-    <footer className="footer-note">
-      For trained anesthesia professionals. Verify doses with monitoring & references.
-    </footer>
-  )
-}
-
-export default function App(){
-  const [tab, setTab] = useState<TabKey>('syringes')
-
-  const [tbw, setTbw] = useState<number>(70)
-  const [height, setHeight] = useState<number|undefined>(170)
-  const [sex, setSex] = useState<Sex>('M')
-
-  const ibw = ibwKg(height, sex, tbw)
-  const lbw = lbwKg(height, sex, tbw)
-
-  return (
-    <main className="min-h-screen bg-gray-50 text-gray-900 pb-28">
-      <header className="sticky top-0 bg-white border-b px-3 py-2 z-10">
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold">Anesthetist Toolkit</h1>
-          <a href="/legacy.html" className="text-sm underline text-blue-700">Legacy</a>
+    <div className="min-h-screen flex flex-col">
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-600 grid place-items-center text-white">
+            <Brain className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold">Anesthetist App (PWA)</h1>
+            <p className="text-xs text-gray-500 -mt-0.5">Offline-ready • Add to Home Screen</p>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <a
+              href="/legacy.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2 border rounded-xl hover:bg-gray-50"
+              title="Open your original Toolkit (static HTML)"
+            >
+              Open Legacy Toolkit
+            </a>
+            <InstallPrompt />
+          </div>
         </div>
       </header>
 
-      {tab === 'home' && (
-        <section className="px-3 mt-3 space-y-4">
-          <div>
-            <h2 className="font-semibold">Patient</h2>
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              <label className="text-sm">TBW (kg)
-                <input className="mt-1 w-full border rounded px-2 py-1" type="number" value={tbw} onChange={e=>setTbw(+e.target.value||0)} />
-              </label>
-              <label className="text-sm">Height (cm)
-                <input className="mt-1 w-full border rounded px-2 py-1" type="number" value={height ?? ''} onChange={e=>setHeight(e.target.value? +e.target.value : undefined)} />
-              </label>
-              <label className="text-sm">Sex
-                <select className="mt-1 w-full border rounded px-2 py-1" value={sex} onChange={e=>setSex(e.target.value as Sex)}>
-                  <option value="M">M</option>
-                  <option value="F">F</option>
-                </select>
-              </label>
+      <main className="flex-1">
+        <section className="max-w-3xl mx-auto p-4">
+          <div className="grid gap-4">
+            {/* Patient summary */}
+            <PatientCard />
+
+            {/* Quick Info (sizes, fluids, EBV) */}
+            <QuickInfo />
+
+            {/* Surgical Timer */}
+            <div className="rounded-2xl border bg-white shadow-sm">
+              <div className="p-4 border-b flex items-center gap-2">
+                <TimerReset className="w-5 h-5 text-blue-600" />
+                <h2 className="font-semibold">Surgical Timer</h2>
+              </div>
+              <div className="p-4">
+                <Timer />
+              </div>
             </div>
-            <div className="mt-3 text-sm text-gray-600">
-              <div>IBW ≈ <strong>{ibw} kg</strong> · LBW ≈ <strong>{lbw} kg</strong></div>
+
+            {/* Relaxant Timers */}
+            <RelaxantTimers />
+            <DrugDoseCards />
+            <SyringeCards />
+
+            {/* Local anesthetic calculator */}
+            <div className="rounded-2xl border bg-white shadow-sm">
+              <div className="p-4 border-b flex items-center gap-2">
+                <Syringe className="w-5 h-5 text-blue-600" />
+                <h2 className="font-semibold">Local Anesthetic — Max Dose</h2>
+              </div>
+              <div className="p-4">
+                <LocalAnestheticCalc />
+              </div>
             </div>
           </div>
         </section>
-      )}
+      </main>
 
-      {tab === 'syringes' && <SyringeCards tbwKg={tbw} heightCm={height} sex={sex} />}
-      {tab === 'timer' && <Timer />}
-
-      {/* Legacy-embedded sections to restore full functionality immediately */}
-      {tab === 'doses' && <LegacySection />}
-      {tab === 'ett' && <LegacySection />}
-      {tab === 'la' && <LegacySection />}
-      {tab === 'fluids' && <LegacySection />}
-      {tab === 'mac' && <LegacySection />}
-
-      <TabsBar current={tab} setCurrent={setTab} />
-      <FooterNote />
-    </main>
+      <footer className="border-t bg-white">
+        <div className="max-w-3xl mx-auto px-4 py-3 text-xs text-gray-500">
+          v0.3 • Data is stored locally on your device. Use clinical judgement & local policy.
+        </div>
+      </footer>
+    </div>
   )
 }
