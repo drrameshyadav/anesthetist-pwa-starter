@@ -1,197 +1,170 @@
 import React from 'react'
-import { STOCKS, SYRINGES, type Group, type Unit, type WeightBasis } from '../lib/syringes'
-import { ibwKg, lbwKg, type Sex } from '../lib/weights'
+import { STOCKS, SYRINGES, type Unit, type SyringeDef, type Group } from '../lib/syringes'
 
-function useLS(key: string, initial: string = '') {
-  const [v, setV] = React.useState<string>(() => localStorage.getItem(key) ?? initial)
-  React.useEffect(() => { localStorage.setItem(key, v) }, [key, v])
+function useLocalNumber(key: string, initial?: number) {
+  const [v, setV] = React.useState<number | ''>(() => {
+    const raw = localStorage.getItem(key)
+    if (raw == null) return initial ?? ''
+    const n = Number(raw)
+    return isNaN(n) ? '' : n
+  })
+  React.useEffect(() => {
+    if (v === '' || v == null) localStorage.removeItem(key)
+    else localStorage.setItem(key, String(v))
+  }, [key, v])
   return [v, setV] as const
 }
 
-function unitToMg(n: number, u: Unit) { return u === 'mcg' ? n / 1000 : n }
-
-function chooseWeight(basis: WeightBasis, tbw: number, ibw?: number, lbw?: number, fallback: number = tbw) {
-  if (basis === 'TBW') return tbw
-  if (basis === 'IBW') return ibw ?? fallback
-  if (basis === 'LBW') return lbw ?? fallback
-  return fallback // AUTO handled at per-drug level below
+function unitToMg(amount: number, unit: Unit) {
+  return unit === 'mcg' ? amount / 1000 : amount
 }
 
-/** compute final concentration for a syringe (mg/mL) */
-function finalConcMgPerMl(s: (typeof SYRINGES)[number], stock: typeof STOCKS, vecuConcOverride?: number): number {
+function Card({ s, stockMap, onStockChange }: {
+  s: SyringeDef
+  stockMap: Record<string, number | ''>
+  onStockChange: (drugKey: string, mgPerMl: number | '') => void
+}) {
   const finalVol = s.finalVolumeMl
-  if (s.mode === 'target' && s.target) {
-    const mg = unitToMg(s.target.amount, s.target.unit)
-    return mg / finalVol
-  }
-  if (s.mode === 'fixed' && s.fixed) {
-    // if single-drug fixed: just scaled stock; for multi (e.g., reversal), return primary component mg/mL for dosing (neostigmine)
-    const totalMg: Record<string, number> = {}
-    for (const f of s.fixed) {
-      const conc = f.drugKey === 'vecuronium' && vecuConcOverride ? vecuConcOverride : stock[f.drugKey].mgPerMl
-      totalMg[f.drugKey] = (totalMg[f.drugKey] ?? 0) + conc * f.volumeMl
-    }
-    const primary = s.doseConfig?.primaryDrugKey ?? (s.fixed.length === 1 ? s.fixed[0].drugKey : s.fixed[0].drugKey)
-    const mg = totalMg[primary] ?? 0
-    return mg / finalVol
-  }
-  return 0
-}
+  let usedVol = 0
+  let lines: React.ReactNode[] = []
 
-/** display helper */
-function fmt(n: number, dp = 2) { return Number.isFinite(n) ? n.toFixed(dp).replace(/\.00$/, '') : '—' }
+  if (s.mode === 'target' && s.target) {
+    const sc = stockMap[s.target.drugKey]
+    let drawMl: number | null = null
+    if (typeof sc === 'number' && sc > 0) {
+      drawMl = unitToMg(s.target.amount, s.target.unit) / sc
+      usedVol += drawMl
+    }
+    lines.push(
+      <div key="t">
+        <div className="text-sm"><span className="font-medium">{STOCKS[s.target.drugKey].label}</span> target <span className="font-medium">{s.target.amount} {s.target.unit}</span> in {finalVol} mL</div>
+        <div className="text-xs text-gray-600 mt-1">
+          Stock conc (mg/mL):&nbsp;
+          <input
+            type="number" inputMode="decimal" step="0.01"
+            className="w-28 rounded border px-2 py-1"
+            value={stockMap[s.target.drugKey] === '' ? '' : stockMap[s.target.drugKey]}
+            onChange={e => onStockChange(s.target!.drugKey, e.target.value === '' ? '' : Number(e.target.value))}
+          />
+          {STOCKS[s.target.drugKey].note && <span className="ml-2 text-gray-500">{STOCKS[s.target.drugKey].note}</span>}
+        </div>
+        <div className="text-sm mt-1">
+          {drawMl != null && isFinite(drawMl)
+            ? <>Draw <span className="font-medium">{drawMl.toFixed(2)} mL</span> {STOCKS[s.target.drugKey].label} + add NS to <span className="font-medium">{finalVol} mL</span></>
+            : <span className="text-red-600">Enter stock concentration to compute draw volume</span>}
+        </div>
+        {typeof sc === 'number' && sc > 0 && (
+          <div className="text-xs text-gray-600 mt-1">
+            Final concentration ≈ {(unitToMg(s.target.amount, s.target.unit) / finalVol).toFixed(3)} mg/mL
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (s.mode === 'fixed' && s.fixed) {
+    lines.push(
+      <div key="f" className="text-sm">
+        {s.fixed.map((f, idx) => {
+          const sc = stockMap[f.drugKey]
+          let mg = (typeof sc === 'number' && sc > 0) ? sc * f.volumeMl : null
+          usedVol += f.volumeMl
+          return (
+            <div key={idx} className="mt-1">
+              Draw <span className="font-medium">{f.volumeMl} mL</span> {STOCKS[f.drugKey].label}
+              <span className="text-xs text-gray-600">
+                &nbsp;{typeof sc === 'number' && sc > 0 ? `(~${mg!.toFixed(2)} mg at ${sc} mg/mL)` : `(enter stock conc)`}
+              </span>
+              <div className="text-xs text-gray-600">
+                Stock conc (mg/mL):&nbsp;
+                <input
+                  type="number" inputMode="decimal" step="0.01"
+                  className="w-28 rounded border px-2 py-1"
+                  value={stockMap[f.drugKey] === '' ? '' : stockMap[f.drugKey]}
+                  onChange={e => onStockChange(f.drugKey, e.target.value === '' ? '' : Number(e.target.value))}
+                />
+                {STOCKS[f.drugKey].note && <span className="ml-2 text-gray-500">{STOCKS[f.drugKey].note}</span>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  const topUp = Math.max(0, finalVol - usedVol)
+  return (
+    <article className="rounded-2xl border bg-white p-3 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-base font-semibold">{s.label}</div>
+          <div className="text-xs text-gray-600">{s.group === 'adult' ? 'Adult' : 'Pediatric'}</div>
+          {s.note && <div className="text-xs text-yellow-700 mt-1">⚠ {s.note}</div>}
+        </div>
+      </div>
+
+      <div className="mt-2 space-y-2">{lines}</div>
+
+      <div className="mt-2 text-sm">
+        Add NS to <span className="font-medium">{finalVol.toFixed(1)} mL</span>
+        {usedVol > finalVol && <span className="text-red-600 ml-2">Check volumes: exceed final volume</span>}
+        {usedVol <= finalVol && <span className="text-gray-600 ml-2">({topUp.toFixed(2)} mL NS)</span>}
+      </div>
+    </article>
+  )
+}
 
 export function SyringeCards() {
   const [tab, setTab] = React.useState<Group>('adult')
 
-  // Patient info (shared with your Patient card if it already stores these keys)
-  const [wStr] = useLS('patient.weight.kg', '')
-  const [hStr] = useLS('patient.height.cm', '')
-  const [sexStr] = useLS('patient.sex', '') // 'M' | 'F'
+  // one localStorage-backed concentration per stock drug
+  const [conc, setConc] = React.useState<Record<string, number | ''>>(() => {
+    const initial: Record<string, number | ''> = {}
+    for (const key of Object.keys(STOCKS)) {
+      const ls = localStorage.getItem(`stock.${key}.mgml`)
+      if (ls != null && ls !== '' && !isNaN(Number(ls))) initial[key] = Number(ls)
+      else if (STOCKS[key].defaultMgPerMl != null) initial[key] = STOCKS[key].defaultMgPerMl!
+      else initial[key] = ''
+    }
+    return initial
+  })
 
-  const tbw = Number(wStr) || 70
-  const h = Number(hStr) || 0
-  const sex = (sexStr === 'M' || sexStr === 'F') ? (sexStr as Sex) : 'M'
-
-  const ibw = h > 0 ? ibwKg(h, sex) : undefined
-  const lbw = h > 0 ? lbwKg(tbw, h, sex) : undefined
-
-  // Vecuronium only: allow stock conc edit (others locked to your practice)
-  const [vecuConcStr, setVecuConcStr] = useLS('stock.vecuronium.mgml', String(STOCKS.vecuronium.mgPerMl))
-  const vecuConc = Number(vecuConcStr) > 0 ? Number(vecuConcStr) : undefined
+  const changeConc = (drugKey: string, v: number | '') => {
+    setConc(prev => {
+      const next = { ...prev, [drugKey]: v }
+      if (v === '' || v == null) localStorage.removeItem(`stock.${drugKey}.mgml`)
+      else localStorage.setItem(`stock.${drugKey}.mgml`, String(v))
+      return next
+    })
+  }
 
   const list = SYRINGES.filter(s => s.group === tab)
 
   return (
     <section className="px-3 pb-6">
       <div className="mb-3 flex gap-2">
-        <button className={`rounded-lg px-3 py-2 text-sm border ${tab==='adult'?'bg-blue-600 text-white':'bg-white'}`} onClick={() => setTab('adult')}>Adult</button>
-        <button className={`rounded-lg px-3 py-2 text-sm border ${tab==='peds'?'bg-blue-600 text-white':'bg-white'}`} onClick={() => setTab('peds')}>Pediatric</button>
+        <button
+          className={`rounded-lg px-3 py-2 text-sm border ${tab==='adult'?'bg-blue-600 text-white':'bg-white'}`}
+          onClick={() => setTab('adult')}
+        >Adult</button>
+        <button
+          className={`rounded-lg px-3 py-2 text-sm border ${tab==='peds'?'bg-blue-600 text-white':'bg-white'}`}
+          onClick={() => setTab('peds')}
+        >Pediatric</button>
       </div>
 
       <h2 className="text-xl font-semibold mb-3">Syringes</h2>
 
       <div className="grid grid-cols-1 gap-3">
-        {list.map(s => {
-          const finalC = finalConcMgPerMl(s, STOCKS, vecuConc)
-          const guide = s.doseConfig
-          const autoBasis: WeightBasis =
-            guide?.basis === 'AUTO'
-              ? (['fentanyl','propofol','ketamine','midazolam'].includes(s.target?.drugKey ?? s.fixed?.[0]?.drugKey ?? '')
-                  ? 'LBW'
-                  : (['atracurium','vecuronium'].includes(s.target?.drugKey ?? s.fixed?.[0]?.drugKey ?? '')
-                      ? 'IBW'
-                      : 'TBW'))
-              : (guide?.basis ?? 'TBW')
-
-          const weightUsed = chooseWeight(autoBasis, tbw, ibw, lbw, tbw)
-
-          // UI: editable per-kg dose (defaults provided)
-          const [doseStr, setDoseStr] = React.useState<string>(String(guide?.defaultPerKg ?? ''))
-
-          // calculate mL to administer
-          let mlToGive: number | null = null
-          if (guide && finalC > 0) {
-            const perKg = Number(doseStr)
-            if (!isNaN(perKg) && perKg > 0) {
-              const mg = unitToMg(perKg, guide.unitPerKg) * weightUsed
-              mlToGive = mg / finalC
-            }
-          }
-
-          // for reversal mixtures, also show paired drug amount delivered at that volume
-          let pairedInfo: React.ReactNode = null
-          if (s.mode === 'fixed' && s.doseConfig?.primaryDrugKey && mlToGive != null) {
-            const map: Record<string, number> = {}
-            for (const f of s.fixed ?? []) {
-              const c = f.drugKey === 'vecuronium' && vecuConc ? vecuConc : STOCKS[f.drugKey].mgPerMl
-              map[f.drugKey] = (map[f.drugKey] ?? 0) + c * (f.volumeMl / s.finalVolumeMl) // mg per mL of mix
-            }
-            const delivered: Record<string, number> = {}
-            Object.keys(map).forEach(k => { delivered[k] = map[k] * (mlToGive as number) })
-            const others = Object.keys(delivered).filter(k => k !== s.doseConfig!.primaryDrugKey)
-            if (others.length > 0) {
-              pairedInfo = <div className="text-xs text-gray-600 mt-1">
-                This also delivers {others.map((k, i) =>
-                  <span key={k}>
-                    {i>0?', ':''}{STOCKS[k].label} ~{fmt(delivered[k], 2)} mg
-                  </span>
-                )}
-              </div>
-            }
-          }
-
-          return (
-            <article key={s.key} className="rounded-2xl border bg-white p-3 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-base font-semibold">{s.label}</div>
-                  <div className="text-xs text-gray-600">{s.group === 'adult' ? 'Adult' : 'Pediatric'}</div>
-                  {s.note && <div className="text-xs text-yellow-700 mt-1">⚠ {s.note}</div>}
-                </div>
-                { (s.target?.drugKey === 'vecuronium' || s.fixed?.some(f => f.drugKey==='vecuronium')) && (
-                  <div className="text-xs text-gray-600 text-right">
-                    <div className="font-medium">Vecuronium conc (mg/mL)</div>
-                    <input
-                      type="number" step="0.1" className="w-24 rounded border px-2 py-1 mt-1"
-                      value={vecuConcStr} onChange={e => setVecuConcStr(e.target.value)}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-2 text-sm">
-                <div className="text-gray-700">
-                  Final concentration ≈ <span className="font-medium">{fmt(finalC, 3)} mg/mL</span>
-                </div>
-              </div>
-
-              {s.doseConfig && (
-                <div className="mt-3 rounded-xl border bg-gray-50 p-3">
-                  <div className="text-sm font-medium mb-2">Dose → mL calculator</div>
-                  <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <label>Weight basis:</label>
-                    <span className="rounded border px-2 py-1 bg-white">{autoBasis}</span>
-                    { (autoBasis!=='TBW' && (!h || !sexStr)) && (
-                      <span className="text-xs text-yellow-700">Height/sex missing → fell back to TBW</span>
-                    )}
-                  </div>
-                  <div className="mt-2 flex items-center gap-2 text-sm">
-                    <label className="whitespace-nowrap">Dose:</label>
-                    <input
-                      type="number" inputMode="decimal" className="w-28 rounded border px-2 py-1 bg-white"
-                      value={doseStr} onChange={e => setDoseStr(e.target.value)}
-                    />
-                    <span className="text-gray-600">{s.doseConfig.unitPerKg}/kg</span>
-                    {s.doseConfig.rangePerKg && (
-                      <span className="text-xs text-gray-500">
-                        (range {s.doseConfig.rangePerKg[0]}–{s.doseConfig.rangePerKg[1]} {s.doseConfig.unitPerKg}/kg)
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-2 text-sm">
-                    Using weight = <span className="font-medium">{fmt(weightUsed,1)} kg</span>
-                    {mlToGive!=null ? (
-                      <div className="mt-1">
-                        Give <span className="font-semibold">{fmt(mlToGive,2)} mL</span> from this syringe
-                      </div>
-                    ) : (
-                      <div className="mt-1 text-red-600">Enter a valid dose</div>
-                    )}
-                    {pairedInfo}
-                  </div>
-                </div>
-              )}
-
-              <p className="mt-3 text-[12px] leading-snug text-gray-600">
-                For trained anesthesia professionals. Verify local vial strengths & protocols. Weight-basis uses:
-                LBW for opioids/induction; IBW for non-depolarizing NMBAs; TBW for SCh and reversal/anticholinergics.
-              </p>
-            </article>
-          )
-        })}
+        {list.map(s => (
+          <Card key={s.key} s={s} stockMap={conc} onStockChange={changeConc} />
+        ))}
       </div>
+
+      <p className="mt-4 text-[12px] leading-snug text-gray-600">
+        For trained anesthesia professionals only. Recipes reflect your provided practice. Enter/confirm stock concentrations to display mg content.
+        This app does not replace institutional protocols or clinical judgment.
+      </p>
     </section>
   )
 }
