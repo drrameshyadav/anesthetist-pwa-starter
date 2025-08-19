@@ -7,6 +7,7 @@ import PatientCard from './components/PatientCard'
 import RelaxantTimers from './components/RelaxantTimers'
 import QuickInfo from './components/QuickInfo'
 import { DrugDoseCards } from './components/DrugDoseCards'
+import { SyringeCards } from './components/SyringeCards'
 
 export default function App() {
   return (
@@ -58,6 +59,7 @@ export default function App() {
             {/* Relaxant Timers */}
             <RelaxantTimers />
             <DrugDoseCards />
+            <SyringeCards />
 
             {/* Local anesthetic calculator */}
             <div className="rounded-2xl border bg-white shadow-sm">
