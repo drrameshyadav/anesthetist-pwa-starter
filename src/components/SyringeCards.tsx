@@ -19,6 +19,23 @@ function unitToMg(amount: number, unit: Unit) {
   return unit === 'mcg' ? amount / 1000 : amount
 }
 
+/** Heuristics: infer default mg/mL from the STOCK label (India-typical) */
+function guessDefaultMgPerMl(label: string): number | '' {
+  const L = label.toLowerCase()
+  if (L.includes('fentanyl')) return 0.05      // 50 mcg/mL
+  if (L.includes('ketamine')) return 50
+  if (L.includes('atracurium')) return 10
+  if (L.includes('propofol')) return 10
+  if (L.includes('vecuronium')) return ''       // depends on reconstitution → leave blank
+  if (L.includes('neostigmine')) return 0.5
+  if (L.includes('glyco') || L.includes('glycopyr')) return 0.2
+  if (L.includes('midazolam')) return 1
+  if (L.includes('succinyl') || L.includes('sux') || L.includes('scholine')) return 50
+  if (L.includes('atropine')) return 0.6
+  if (L.includes('dexamethasone')) return 4
+  return ''
+}
+
 function Card({ s, stockMap, onStockChange }: {
   s: SyringeDef
   stockMap: Record<string, number | ''>
@@ -37,7 +54,10 @@ function Card({ s, stockMap, onStockChange }: {
     }
     lines.push(
       <div key="t">
-        <div className="text-sm"><span className="font-medium">{STOCKS[s.target.drugKey].label}</span> target <span className="font-medium">{s.target.amount} {s.target.unit}</span> in {finalVol} mL</div>
+        <div className="text-sm">
+          <span className="font-medium">{STOCKS[s.target.drugKey].label}</span>
+          {' '}target <span className="font-medium">{s.target.amount} {s.target.unit}</span> in {finalVol} mL
+        </div>
         <div className="text-xs text-gray-600 mt-1">
           Stock conc (mg/mL):&nbsp;
           <input
@@ -125,8 +145,10 @@ export function SyringeCards() {
       if (ls != null && ls !== '' && !isNaN(Number(ls))) {
         initial[key] = Number(ls)
       } else {
-        // Removed: defaultMgPerMl access (not in current StockConc type)
-        initial[key] = ''
+        // 👇 Use inferred default from the STOCK label (India-typical). Vecuronium stays blank by design.
+        const label = STOCKS[key]?.label ?? key
+        const def = guessDefaultMgPerMl(label)
+        initial[key] = def === '' ? '' : Number(def)
       }
     }
     return initial
