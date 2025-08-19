@@ -1,113 +1,92 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { storage } from '../lib/storage'
+import React from 'react'
+import { RELAXANT_EVENT, RELAXANT_DEFAULT_MINUTES, type RelaxantDrug, triggerRelaxantGive } from '../lib/relaxant'
 
-type Lap = { t: number, delta: number }
-
-type TimerState = {
+type State = {
   running: boolean
-  startEpoch: number | null  // ms since epoch when last started
-  elapsed: number            // accumulated ms excluding current run
-  laps: Lap[]
+  drug?: RelaxantDrug
+  phase: 'bolus' | 'maintenance'
+  startedAt?: number
+  dueAt?: number
 }
 
-const KEY = 'timerState_v1'
-
-function format(ms: number) {
-  const totalSeconds = Math.floor(ms / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  const centis = Math.floor((ms % 1000) / 10)
-  return `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}.${String(centis).padStart(2,'0')}`
+function fmt(t: number) {
+  const s = Math.max(0, Math.floor(t / 1000))
+  const mm = Math.floor(s/60).toString().padStart(2, '0')
+  const ss = (s%60).toString().padStart(2, '0')
+  return `${mm}:${ss}`
 }
 
 export default function Timer() {
-  const [state, setState] = useState<TimerState>(() => storage.get<TimerState>(KEY, {
-    running: false,
-    startEpoch: null,
-    elapsed: 0,
-    laps: []
-  }))
+  const [state, setState] = React.useState<State>({ running: false, phase: 'bolus' })
 
-  const [now, setNow] = useState<number>(() => performance.now())
-  const raf = useRef<number | null>(null)
-
-  // Persist
-  useEffect(() => { storage.set(KEY, state) }, [state])
-
-  // Ticker when running
-  useEffect(() => {
-    if (!state.running) return
-    const tick = () => {
-      setNow(performance.now())
-      raf.current = requestAnimationFrame(tick)
+  // Listen to “Give” events from Syringe cards
+  React.useEffect(() => {
+    function onGive(e: any) {
+      const drug: RelaxantDrug = e.detail?.drug
+      const now = Date.now()
+      setState(prev => {
+        const firstTime = !prev.running || prev.drug !== drug
+        const phase = firstTime ? 'bolus' : 'maintenance'
+        const minutes = RELAXANT_DEFAULT_MINUTES[drug]
+        return {
+          running: true,
+          drug,
+          phase,
+          startedAt: now,
+          dueAt: now + minutes*60*1000,
+        }
+      })
     }
-    raf.current = requestAnimationFrame(tick)
-    return () => { if (raf.current) cancelAnimationFrame(raf.current) }
-  }, [state.running])
+    window.addEventListener(RELAXANT_EVENT, onGive as any)
+    return () => window.removeEventListener(RELAXANT_EVENT, onGive as any)
+  }, [])
 
-  // Adjust elapsed on visibility change (keeps correct time when backgrounded)
-  useEffect(() => {
-    const onVis = () => {
-      if (state.running && state.startEpoch !== null) {
-        // recompute elapsed including real wall time
-        const realElapsed = Date.now() - state.startEpoch
-        setState(s => ({ ...s, elapsed: s.elapsed, startEpoch: Date.now() - realElapsed }))
-      }
-    }
-    document.addEventListener('visibilitychange', onVis)
-    return () => document.removeEventListener('visibilitychange', onVis)
-  }, [state.running, state.startEpoch])
+  const now = Date.now()
+  const elapsed = state.startedAt ? now - state.startedAt : 0
+  const toDue = state.dueAt ? state.dueAt - now : 0
+  const pct = state.dueAt ? Math.min(100, Math.max(0, (elapsed / (state.dueAt - (state.startedAt ?? now))) * 100)) : 0
 
-  const current = state.running && state.startEpoch
-    ? state.elapsed + (Date.now() - state.startEpoch)
-    : state.elapsed
-
-  const start = () => {
-    if (state.running) return
-    setState(s => ({ ...s, running: true, startEpoch: Date.now() }))
-  }
-  const stop = () => {
-    if (!state.running || state.startEpoch === null) return
-    const add = Date.now() - state.startEpoch
-    setState(s => ({ ...s, running: false, startEpoch: null, elapsed: s.elapsed + add }))
-  }
-  const reset = () => {
-    setState({ running: false, startEpoch: null, elapsed: 0, laps: [] })
-  }
-  const lap = () => {
-    const t = current
-    const prev = state.laps.length ? state.laps[state.laps.length - 1].t : 0
-    const delta = t - prev
-    setState(s => ({ ...s, laps: [...s.laps, { t, delta }] }))
+  if (!state.running) {
+    return (
+      <section className="rounded-2xl border bg-white p-3 shadow-sm">
+        <h2 className="text-base font-semibold">Relaxant Timer</h2>
+        <p className="text-sm text-gray-600 mt-1">Press <em>Give</em> on Atracurium or Vecuronium to start. You can also trigger top-ups here.</p>
+      </section>
+    )
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="text-5xl font-mono tabular-nums text-center">{format(current)}</div>
-      <div className="flex gap-2 justify-center">
-        {!state.running ? (
-          <button onClick={start} className="px-4 py-2 rounded-xl bg-blue-600 text-white">Start</button>
-        ) : (
-          <button onClick={stop} className="px-4 py-2 rounded-xl bg-rose-600 text-white">Stop</button>
-        )}
-        <button onClick={lap} className="px-4 py-2 rounded-xl border">Lap</button>
-        <button onClick={reset} className="px-4 py-2 rounded-xl border">Reset</button>
+    <section className="rounded-2xl border bg-white p-3 shadow-sm">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-base font-semibold">Relaxant Timer — {state.drug}</h2>
+        <span className="text-xs text-gray-600">{state.phase}</span>
       </div>
 
-      {state.laps.length > 0 && (
+      <div className="text-3xl font-mono mt-2">{fmt(elapsed)}</div>
+
+      {state.dueAt && (
         <div className="mt-2">
-          <div className="text-sm text-gray-600 mb-2">Laps</div>
-          <ul className="max-h-48 overflow-auto divide-y">
-            {state.laps.map((l, i) => (
-              <li key={i} className="py-2 flex justify-between font-mono text-sm">
-                <span className="text-gray-500">#{i+1}</span>
-                <span>{format(l.delta)}</span>
-                <span className="text-gray-700">{format(l.t)}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="h-2 rounded bg-gray-200 overflow-hidden">
+            <div className="h-2" style={{width: `${pct}%`}}></div>
+          </div>
+          <div className="text-xs text-gray-600 mt-1">Next due in ~ {fmt(toDue)}</div>
         </div>
       )}
-    </div>
+
+      <div className="mt-3 flex gap-2">
+        <button
+          className="rounded-xl border px-3 py-2 bg-blue-600 text-white"
+          onClick={() => state.drug && triggerRelaxantGive(state.drug)}
+        >
+          Top up now & Restart
+        </button>
+        <button
+          className="rounded-xl border px-3 py-2"
+          onClick={() => setState({ running: false, phase: 'bolus' })}
+        >
+          Remove
+        </button>
+      </div>
+    </section>
   )
 }
