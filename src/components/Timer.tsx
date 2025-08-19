@@ -1,96 +1,120 @@
-import React from 'react'
-import { RELAXANT_EVENT, RELAXANT_DEFAULT_MINUTES, triggerRelaxantGive } from '../lib/relaxant'
+import React, { useEffect, useRef, useState } from 'react'
 
-type State = {
-  running: boolean
-  drug?: 'atracurium' | 'vecuronium'
-  phase: 'bolus' | 'maintenance'
-  startedAt?: number
-  dueAt?: number
+export type Relaxant = 'atracurium' | 'vecuronium'
+
+type Phase = 'bolus' | 'maintenance'
+
+type StartOpts = {
+  drug: Relaxant,
+  phase?: Phase,
+  maintenanceMin?: number
 }
 
-function fmt(t: number) {
-  const s = Math.max(0, Math.floor(t / 1000))
-  const mm = Math.floor(s/60).toString().padStart(2, '0')
-  const ss = (s%60).toString().padStart(2, '0')
-  return `${mm}:${ss}`
-}
+function now() { return Date.now() }
 
 export default function Timer() {
-  const [state, setState] = React.useState<State>({ running: false, phase: 'bolus' })
-  const [now, setNow] = React.useState<number>(() => Date.now())
+  // Persisted across reloads
+  const [startMs, setStartMs] = useState<number>(() => Number(localStorage.getItem('rt_start')) || 0)
+  const [running, setRunning] = useState<boolean>(() => localStorage.getItem('rt_running') === '1')
+  const [phase, setPhase] = useState<Phase>(() => (localStorage.getItem('rt_phase') as Phase) || 'bolus')
+  const [drug, setDrug] = useState<Relaxant>(() => (localStorage.getItem('rt_drug') as Relaxant) || 'atracurium')
+  const [maintMin, setMaintMin] = useState<number>(() => Number(localStorage.getItem('rt_maintMin')) || 20)
 
-  // tick so the clock moves
-  React.useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 500)
-    return () => clearInterval(id)
-  }, [])
+  const tick = useForceTick(running)
 
-  // Listen to “Give” events from Syringe cards
-  React.useEffect(() => {
-    function onGive(e: any) {
-      const drug = e.detail?.drug as State['drug']
-      const nowT = Date.now()
-      setState(prev => {
-        const firstTime = !prev.running || prev.drug !== drug
-        const phase = firstTime ? 'bolus' : 'maintenance'
-        const minutes = RELAXANT_DEFAULT_MINUTES[drug ?? 'atracurium']
-        return {
-          running: true,
-          drug,
-          phase,
-          startedAt: nowT,
-          dueAt: nowT + minutes*60*1000,
-        }
-      })
-    }
-    window.addEventListener(RELAXANT_EVENT, onGive as any)
-    return () => window.removeEventListener(RELAXANT_EVENT, onGive as any)
-  }, [])
+  useEffect(() => { localStorage.setItem('rt_start', String(startMs)) }, [startMs])
+  useEffect(() => { localStorage.setItem('rt_running', running ? '1' : '0') }, [running])
+  useEffect(() => { localStorage.setItem('rt_phase', phase) }, [phase])
+  useEffect(() => { localStorage.setItem('rt_drug', drug) }, [drug])
+  useEffect(() => { localStorage.setItem('rt_maintMin', String(maintMin)) }, [maintMin])
 
-  const elapsed = state.startedAt ? now - state.startedAt : 0
-  const toDue = state.dueAt ? state.dueAt - now : 0
-  const pct = state.dueAt && state.startedAt ? Math.min(100, Math.max(0, (elapsed / (state.dueAt - state.startedAt)) * 100)) : 0
+  function elapsedMs() { return running && startMs ? now() - startMs : 0 }
 
-  if (!state.running) {
-    return (
-      <section className="rounded-2xl border bg-white p-3 shadow-sm">
-        <h2 className="text-base font-semibold">Relaxant Timer</h2>
-        <p className="text-sm text-gray-600 mt-1">Start here or press <em>Give</em> on a syringe card.</p>
-        <div className="mt-2 flex gap-2">
-          <button className="rounded-lg border px-2 py-1 text-sm bg-white" onClick={()=>triggerRelaxantGive('atracurium')}>Start Atracurium</button>
-          <button className="rounded-lg border px-2 py-1 text-sm bg-white" onClick={()=>triggerRelaxantGive('vecuronium')}>Start Vecuronium</button>
-        </div>
-      </section>
-    )
+  function startTimer(opts?: StartOpts) {
+    if (opts?.drug) setDrug(opts.drug)
+    if (opts?.maintenanceMin) setMaintMin(opts.maintenanceMin)
+    setPhase(opts?.phase || 'bolus')
+    setStartMs(now())
+    setRunning(true)
   }
+  function stopTimer() { setRunning(false) }
+  function clearTimer() { setRunning(false); setStartMs(0) }
+  function restartMaintenance() { setPhase('maintenance'); setStartMs(now()); setRunning(true) }
+
+  const ms = elapsedMs(); void tick // re-render while running
+  const { mm, ss } = msToMMSS(ms)
+
+  const defaultMaint = drug === 'atracurium' ? 20 : 30 // placeholder defaults
 
   return (
-    <section className="rounded-2xl border bg-white p-3 shadow-sm">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-base font-semibold">Relaxant Timer — {state.drug}</h2>
-        <span className="text-xs text-gray-600">{state.phase}</span>
+    <section className="w-full px-3 pb-24">
+      <h2 className="text-xl font-semibold mt-3">Relaxant stopwatch</h2>
+
+      <div className="mt-2 inline-flex items-baseline gap-2">
+        <div className="text-4xl tabular-nums" aria-live="polite">{mm}:{ss}</div>
+        <span className="px-2 py-0.5 rounded bg-gray-100 text-xs">{drug} · {phase}</span>
       </div>
 
-      <div className="text-3xl font-mono mt-2">{fmt(elapsed)}</div>
-
-      {state.dueAt && (
-        <div className="mt-2">
-          <div className="h-2 rounded bg-gray-200 overflow-hidden">
-            <div className="h-2" style={{width: `${pct}%`}}></div>
-          </div>
-          <div className="text-xs text-gray-600 mt-1">Next due in ~ {fmt(toDue)}</div>
-        </div>
-      )}
-
       <div className="mt-3 flex gap-2">
-        <button className="rounded-lg border px-2 py-1 text-sm bg-blue-600 text-white" onClick={() => state.drug && triggerRelaxantGive(state.drug)}>
+        {!running && <button className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white" onClick={()=>startTimer({ drug, phase })}>Start</button>}
+        {running && <button className="px-3 py-1.5 text-sm rounded bg-gray-200" onClick={stopTimer}>Pause</button>}
+        <button className="px-3 py-1.5 text-sm rounded bg-gray-200" onClick={clearTimer}>Clear</button>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button className="px-3 py-1.5 text-sm rounded bg-emerald-600 text-white" onClick={restartMaintenance}>
           Top up now & Restart
         </button>
-        <button className="rounded-lg border px-2 py-1 text-sm" onClick={() => setState({ running: false, phase: 'bolus' })}>
+        <button className="px-3 py-1.5 text-sm rounded bg-rose-600 text-white" onClick={clearTimer}>
           Remove
         </button>
       </div>
+
+      <div className="mt-4 flex items-center gap-2">
+        <label className="text-sm">Maintenance window (min)</label>
+        <input type="number" className="w-20 border rounded px-2 py-1 text-sm" value={maintMin}
+          onChange={e=>setMaintMin(Number(e.target.value)||defaultMaint)} />
+        <button className="px-3 py-1 text-sm rounded border" onClick={()=>startTimer({ drug, phase:'bolus', maintenanceMin: maintMin })}>
+          Give & start timer
+        </button>
+      </div>
+
+      <details className="mt-4">
+        <summary className="text-sm text-gray-500">Hook: external components can call `window.__startRelaxant`</summary>
+        <code className="block text-xs bg-gray-50 p-2 rounded">window.__startRelaxant?.('atracurium', 20)</code>
+      </details>
+
+      {/* expose a global hook so SyringeCards can start us */}
+      <ScriptBridge onMount={(fn)=>{
+        (window as any).__startRelaxant = (drug: Relaxant, maint: number)=> fn({drug, phase:'bolus', maintenanceMin: maint})
+        return ()=>{ delete (window as any).__startRelaxant }
+      }} startFn={startTimer} />
     </section>
   )
+}
+
+function msToMMSS(ms: number){
+  const total = Math.floor(ms/1000)
+  const mm = String(Math.floor(total/60)).padStart(2,'0')
+  const ss = String(total%60).padStart(2,'0')
+  return { mm, ss }
+}
+
+function useForceTick(active: boolean){
+  const [, setN] = useState(0)
+  const ref = useRef<number>()
+  useEffect(()=>{
+    if(!active){ if(ref.current) cancelAnimationFrame(ref.current); return }
+    let raf: number
+    const loop = ()=>{ setN(n=>n+1); raf = requestAnimationFrame(loop) }
+    raf = requestAnimationFrame(loop)
+    ref.current = raf
+    return ()=> cancelAnimationFrame(raf)
+  }, [active])
+  return null
+}
+
+function ScriptBridge({ onMount, startFn }: { onMount:(fn:(o: StartOpts)=>void)=>()=>void, startFn:(o?:StartOpts)=>void }){
+  useEffect(()=> onMount(startFn), [])
+  return null
 }
