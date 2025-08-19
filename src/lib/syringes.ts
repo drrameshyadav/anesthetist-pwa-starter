@@ -1,96 +1,82 @@
 export type Unit = 'mg' | 'mcg'
 export type Group = 'adult' | 'peds'
-export type SyringeMode = 'target' | 'fixed'  // target = “X mg in 10 mL”; fixed = fixed volumes from stock then NS→10 mL
+export type SyringeMode = 'target' | 'fixed'
 
-/** Stock concentrations (mg/mL). All locked except vecuronium (varies by reconstitution). */
-export interface StockConc { label: string; mgPerMl: number; editable?: boolean; note?: string }
-
+/** Stock concentrations (mg/mL). All fixed except vecuronium (editable). */
+export interface StockConc { label: string; mgPerMl: number; editable?: boolean }
 export const STOCKS: Record<string, StockConc> = {
-  fentanyl:       { label: 'Fentanyl',       mgPerMl: 0.05 },          // 50 mcg/mL
-  ketamine:       { label: 'Ketamine',       mgPerMl: 50 },            // 50 mg/mL
-  atracurium:     { label: 'Atracurium',     mgPerMl: 10 },            // 10 mg/mL
-  propofol:       { label: 'Propofol',       mgPerMl: 10 },            // 10 mg/mL
-  vecuronium:     { label: 'Vecuronium',     mgPerMl: 1, editable: true, note: 'Edit if your local reconstitution differs.' }, // commonly 1 mg/mL
-  neostigmine:    { label: 'Neostigmine',    mgPerMl: 0.5 },           // 0.5 mg/mL
-  glycopyrrolate: { label: 'Glycopyrrolate', mgPerMl: 0.2 },           // 0.2 mg/mL
-  midazolam:      { label: 'Midazolam',      mgPerMl: 1 },             // 1 mg/mL
-  succinylcholine:{ label: 'Succinylcholine',mgPerMl: 50 },            // 50 mg/mL
-  atropine:       { label: 'Atropine',       mgPerMl: 0.6 },           // 0.6 mg/mL
-  dexamethasone:  { label: 'Dexamethasone',  mgPerMl: 4 },             // 4 mg/mL
+  fentanyl:        { label: 'Fentanyl',        mgPerMl: 0.05 },   // 50 µg/mL
+  ketamine:        { label: 'Ketamine',        mgPerMl: 50 },
+  atracurium:      { label: 'Atracurium',      mgPerMl: 10 },
+  propofol:        { label: 'Propofol',        mgPerMl: 10 },
+  vecuronium:      { label: 'Vecuronium',      mgPerMl: 1, editable: true }, // reconstitution varies
+  neostigmine:     { label: 'Neostigmine',     mgPerMl: 0.5 },
+  glycopyrrolate:  { label: 'Glycopyrrolate',  mgPerMl: 0.2 },
+  midazolam:       { label: 'Midazolam',       mgPerMl: 1 },
+  succinylcholine: { label: 'Succinylcholine', mgPerMl: 50 },
+  atropine:        { label: 'Atropine',        mgPerMl: 0.6 },
+  dexamethasone:   { label: 'Dexamethasone',   mgPerMl: 4 },
 }
 
 export interface SyringeDef {
   key: string
   group: Group
-  label: string           // visible title on card (e.g., “Fentanyl — 2 mL + NS→10 mL”)
-  finalVolumeMl: number   // usually 10
+  label: string                 // card title
+  finalVolumeMl: number         // usually 10 mL
   mode: SyringeMode
-  target?: { drugKey: string; amount: number; unit: Unit } // for target syringes
-  fixed?: Array<{ drugKey: string; volumeMl: number }>     // for fixed draw syringes
+  target?: { drugKey: string; amount: number; unit: Unit }
+  fixed?: Array<{ drugKey: string; volumeMl: number }>
   note?: string
-  doseConfig?: DoseConfig // per-drug dose→mL calculator
+  doseConfig?: {
+    unitPerKg: Unit
+    defaultPerKg: number
+    rangePerKg?: [number, number]
+    basis: 'TBW' | 'IBW' | 'LBW' | 'AUTO'
+    primaryDrugKey?: string
+  }
 }
 
-export type WeightBasis = 'TBW' | 'IBW' | 'LBW' | 'AUTO'
-export interface DoseConfig {
-  /** dose units per kg: 'mg' or 'mcg' */
-  unitPerKg: Unit
-  /** default dose per kg (middle of range); UI editable */
-  defaultPerKg: number
-  /** optional safe range hint for UI */
-  rangePerKg?: [number, number]
-  /** weight basis to use; AUTO will map: LBW for opioids/induction; IBW for non-depolarizing NMBAs; TBW for SCh/reversal/anticholinergics */
-  basis: WeightBasis
-  /** when syringe mixes drugs (e.g., reversal), which component drives the dose */
-  primaryDrugKey?: string
-}
+function unitToMg(n: number, u: Unit) { return u === 'mcg' ? n / 1000 : n }
 
-/** Helper to make adult titles in “X mL + NS→10 mL” style given a target in 10 mL */
+/** Build adult titles like “X mL + NS→10 mL” for single-drug targets */
 function volTitle(drugKey: string, targetMg: number, finalMl = 10): string {
   const stock = STOCKS[drugKey].mgPerMl
   const draw = targetMg / stock
   if (Math.abs(draw - finalMl) < 1e-6) return `${STOCKS[drugKey].label} — ${finalMl} mL (undiluted)`
-  const ns = Math.max(0, finalMl - draw).toFixed(1).replace(/\.0$/, '')
   const drawStr = draw.toFixed(2).replace(/\.00$/, '')
   return `${STOCKS[drugKey].label} — ${drawStr} mL + NS→${finalMl} mL`
 }
 
-/** Your practice, encoded */
+/** Your practice, encoded (adult titles clarified; vecuronium subtitle shown in UI) */
 export const SYRINGES: SyringeDef[] = [
-  // --- ADULT (titles in “X mL + NS→10 mL”) ---
-  // Fentanyl 100 mcg in 10 mL  -> stock 0.05 mg/mL => draw 2 mL, NS→10
+  // Adult
   { key: 'adult_fentanyl', group: 'adult', label: volTitle('fentanyl', 0.1), finalVolumeMl: 10, mode: 'target',
     target: { drugKey: 'fentanyl', amount: 100, unit: 'mcg' },
     doseConfig: { unitPerKg: 'mcg', defaultPerKg: 1.0, rangePerKg: [0.5, 2], basis: 'AUTO' } },
 
-  // Ketamine 100 mg in 10 mL (10 mg/mL) is common; confirm locally.
   { key: 'adult_ketamine', group: 'adult', label: volTitle('ketamine', 100), finalVolumeMl: 10, mode: 'target',
     target: { drugKey: 'ketamine', amount: 100, unit: 'mg' },
-    note: 'Default = 100 mg in 10 mL (10 mg/mL). Adjust dose per kg in card if needed.',
     doseConfig: { unitPerKg: 'mg', defaultPerKg: 0.5, rangePerKg: [0.25, 1], basis: 'AUTO' } },
 
-  // Propofol 100 mg / 10 mL (undiluted: 10 mg/mL, draw 10 mL)
   { key: 'adult_propofol', group: 'adult', label: volTitle('propofol', 100), finalVolumeMl: 10, mode: 'target',
     target: { drugKey: 'propofol', amount: 100, unit: 'mg' },
     doseConfig: { unitPerKg: 'mg', defaultPerKg: 2, rangePerKg: [1.5, 2.5], basis: 'AUTO' } },
 
-  // Atracurium 25 mg / 10 mL -> draw 2.5 mL + NS→10
   { key: 'adult_atracurium', group: 'adult', label: volTitle('atracurium', 25), finalVolumeMl: 10, mode: 'target',
     target: { drugKey: 'atracurium', amount: 25, unit: 'mg' },
     doseConfig: { unitPerKg: 'mg', defaultPerKg: 0.5, rangePerKg: [0.5, 0.5], basis: 'AUTO' } },
 
-  // Vecuronium 10 mg / 10 mL -> draw depends on reconstitution (editable)
-  { key: 'adult_vecuronium', group: 'adult', label: 'Vecuronium — draw X mL (editable conc) + NS→10 mL', finalVolumeMl: 10, mode: 'target',
+  // Vecuronium title simplified; subtitle is rendered in the component
+  { key: 'adult_vecuronium', group: 'adult', label: 'Vecuronium', finalVolumeMl: 10, mode: 'target',
     target: { drugKey: 'vecuronium', amount: 10, unit: 'mg' },
-    note: 'Local reconstitution varies; edit the stock conc in the card.',
+    note: 'Edit the stock conc if your local reconstitution differs.',
     doseConfig: { unitPerKg: 'mg', defaultPerKg: 0.08, rangePerKg: [0.08, 0.1], basis: 'AUTO' } },
 
-  // Adult reversal: 5 mL neostigmine + 2 mL glyco + NS→10 mL (dose guided by neostigmine)
   { key: 'adult_reversal', group: 'adult', label: 'Reversal — 5 mL Neostigmine + 2 mL Glyco + NS→10 mL', finalVolumeMl: 10, mode: 'fixed',
     fixed: [{ drugKey: 'neostigmine', volumeMl: 5 }, { drugKey: 'glycopyrrolate', volumeMl: 2 }],
     doseConfig: { unitPerKg: 'mg', defaultPerKg: 0.05, rangePerKg: [0.04, 0.07], basis: 'AUTO', primaryDrugKey: 'neostigmine' } },
 
-  // --- PEDIATRIC (your list) ---
+  // Pediatric (fixed draws)
   { key: 'peds_midazolam', group: 'peds', label: 'Midazolam 1 mL + NS→10 mL', finalVolumeMl: 10, mode: 'fixed',
     fixed: [{ drugKey: 'midazolam', volumeMl: 1 }], doseConfig: { unitPerKg: 'mg', defaultPerKg: 0.02, rangePerKg: [0.02, 0.04], basis: 'AUTO' } },
   { key: 'peds_glyco', group: 'peds', label: 'Glycopyrrolate 1 mL + NS→10 mL', finalVolumeMl: 10, mode: 'fixed',
