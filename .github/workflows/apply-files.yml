@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   apply:
-    # Run only if title contains [files] OR the issue has a label named files
+    # run when title has [files] OR label 'files'
     if: contains(github.event.issue.title, '[files]') || contains(join(github.event.issue.labels.*.name, ','), 'files')
     runs-on: ubuntu-latest
     steps:
@@ -22,19 +22,36 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const body = context.payload.issue.body || '';
-            const re = /```file:([^\n]+)\n([\s\S]*?)```/g;
-            let m, count = 0;
-            while ((m = re.exec(body)) !== null) {
-              const filePath = m[1].trim();
-              const content = m[2].replace(/\r\n/g, '\n');
+            const body = (context.payload.issue.body || '').replace(/\r\n/g, '\n');
+
+            const blocks = [];
+
+            // Pattern A: ```file:path\n...```
+            let reA = /```file:([^\n]+)\n([\s\S]*?)```/g;
+            let mA;
+            while ((mA = reA.exec(body)) !== null) {
+              blocks.push({ filePath: mA[1].trim(), content: mA[2] });
+            }
+
+            // Pattern B: a line starting with "FILE: path" then the next fenced code block ```...```
+            let reB = /(?:^|\n)FILE:\s*([^\n]+)\n+```[^\n]*\n([\s\S]*?)```/gi;
+            let mB;
+            while ((mB = reB.exec(body)) !== null) {
+              blocks.push({ filePath: mB[1].trim(), content: mB[2] });
+            }
+
+            core.info(`Detected ${blocks.length} file block(s).`);
+            if (blocks.length === 0) {
+              core.setFailed('No file blocks found. Use ```file:path``` OR a line starting with "FILE: path" followed by a fenced code block.');
+              return;
+            }
+
+            for (const { filePath, content } of blocks) {
               const dir = path.dirname(filePath);
               fs.mkdirSync(dir, { recursive: true });
               fs.writeFileSync(filePath, content);
               core.info(`Wrote ${filePath}`);
-              count++;
             }
-            if (count === 0) core.setFailed('No ```file:...``` blocks found in issue body');
 
       - name: Create PR
         uses: peter-evans/create-pull-request@v6
