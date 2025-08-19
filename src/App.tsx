@@ -60,7 +60,7 @@ export default function App(){
       {tab === 'syringes' && <SyringeCards tbwKg={tbw} heightCm={height} sex={sex} />}
       {tab === 'timer' && <Timer />}
 
-      {/* Legacy-embedded sections to restore full functionality immediately */}
+      {/* Legacy-embedded sections */}
       {tab === 'doses' && <LegacySection />}
       {tab === 'ett' && <LegacySection />}
       {tab === 'la' && <LegacySection />}
