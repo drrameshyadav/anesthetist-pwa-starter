@@ -1,20 +1,5 @@
 import React from 'react'
 import { STOCKS, SYRINGES, type Unit, type SyringeDef, type Group } from '../lib/syringes'
-import { defaultStockMgPerMl } from '../lib/defaults'
-
-function useLocalNumber(key: string, initial?: number) {
-  const [v, setV] = React.useState<number | ''>(() => {
-    const raw = localStorage.getItem(key)
-    if (raw == null) return initial ?? ''
-    const n = Number(raw)
-    return isNaN(n) ? '' : n
-  })
-  React.useEffect(() => {
-    if (v === '' || v == null) localStorage.removeItem(key)
-    else localStorage.setItem(key, String(v))
-  }, [key, v])
-  return [v, setV] as const
-}
 
 function unitToMg(amount: number, unit: Unit) {
   return unit === 'mcg' ? amount / 1000 : amount
@@ -38,7 +23,10 @@ function Card({ s, stockMap, onStockChange }: {
     }
     lines.push(
       <div key="t">
-        <div className="text-sm"><span className="font-medium">{STOCKS[s.target.drugKey].label}</span> target <span className="font-medium">{s.target.amount} {s.target.unit}</span> in {finalVol} mL</div>
+        <div className="text-sm">
+          <span className="font-medium">{STOCKS[s.target.drugKey].label}</span>{' '}
+          target <span className="font-medium">{s.target.amount} {s.target.unit}</span> in {finalVol} mL
+        </div>
         <div className="text-xs text-gray-600 mt-1">
           Stock conc (mg/mL):&nbsp;
           <input
@@ -47,7 +35,6 @@ function Card({ s, stockMap, onStockChange }: {
             value={stockMap[s.target.drugKey] === '' ? '' : stockMap[s.target.drugKey]}
             onChange={e => onStockChange(s.target!.drugKey, e.target.value === '' ? '' : Number(e.target.value))}
           />
-          {STOCKS[s.target.drugKey].note && <span className="ml-2 text-gray-500">{STOCKS[s.target.drugKey].note}</span>}
         </div>
         <div className="text-sm mt-1">
           {drawMl != null && isFinite(drawMl)
@@ -84,7 +71,6 @@ function Card({ s, stockMap, onStockChange }: {
                   value={stockMap[f.drugKey] === '' ? '' : stockMap[f.drugKey]}
                   onChange={e => onStockChange(f.drugKey, e.target.value === '' ? '' : Number(e.target.value))}
                 />
-                {STOCKS[f.drugKey].note && <span className="ml-2 text-gray-500">{STOCKS[f.drugKey].note}</span>}
               </div>
             </div>
           )
@@ -115,24 +101,25 @@ function Card({ s, stockMap, onStockChange }: {
   )
 }
 
-export function SyringeCards() {
+function useInitialConcFromDefaults(): Record<string, number | ''> {
+  const initial: Record<string, number | ''> = {}
+  for (const key of Object.keys(STOCKS)) {
+    const ls = localStorage.getItem(`stock.${key}.mgml`)
+    if (ls != null && ls !== '' && !isNaN(Number(ls))) {
+      initial[key] = Number(ls) // use saved override
+    } else {
+      const def = (STOCKS as any)[key]?.defaultMgPerMl
+      initial[key] = typeof def === 'number' ? def : ''
+    }
+  }
+  return initial
+}
+
+export default function SyringeCards() {
   const [tab, setTab] = React.useState<Group>('adult')
 
-  // one localStorage-backed concentration per stock drug
-  const [conc, setConc] = React.useState<Record<string, number | ''>>(() => {
-    const initial: Record<string, number | ''> = {}
-    for (const key of Object.keys(STOCKS)) {
-      const ls = localStorage.getItem(`stock.${key}.mgml`)
-      if (ls != null && ls !== '' && !isNaN(Number(ls))) {
-        initial[key] = Number(ls)
-      } else {
-        const label = STOCKS[key]?.label ?? key
-        const def = defaultStockMgPerMl(key, label) // centralized defaults + safe fallback
-        initial[key] = def === '' ? '' : Number(def)
-      }
-    }
-    return initial
-  })
+  // LocalStorage-backed conc per stock drug, defaulting to STOCKS.defaultMgPerMl
+  const [conc, setConc] = React.useState<Record<string, number | ''>>(() => useInitialConcFromDefaults())
 
   const changeConc = (drugKey: string, v: number | '') => {
     setConc(prev => {
@@ -167,9 +154,13 @@ export function SyringeCards() {
       </div>
 
       <p className="mt-4 text-[12px] leading-snug text-gray-600">
-        For trained anesthesia professionals only. Recipes reflect your provided practice. Enter/confirm stock concentrations to display mg content.
+        For trained anesthesia professionals only. Recipes reflect your provided practice.
+        Enter/confirm stock concentrations to display mg content.
         This app does not replace institutional protocols or clinical judgment.
       </p>
     </section>
   )
 }
+
+// Provide both default and named export to satisfy either import style
+export { SyringeCards }
