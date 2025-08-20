@@ -23,10 +23,7 @@ function Card({ s, stockMap, onStockChange }: {
     }
     lines.push(
       <div key="t">
-        <div className="text-sm">
-          <span className="font-medium">{STOCKS[s.target.drugKey].label}</span>{' '}
-          target <span className="font-medium">{s.target.amount} {s.target.unit}</span> in {finalVol} mL
-        </div>
+        <div className="text-sm"><span className="font-medium">{STOCKS[s.target.drugKey].label}</span> target <span className="font-medium">{s.target.amount} {s.target.unit}</span> in {finalVol} mL</div>
         <div className="text-xs text-gray-600 mt-1">
           Stock conc (mg/mL):&nbsp;
           <input
@@ -101,25 +98,20 @@ function Card({ s, stockMap, onStockChange }: {
   )
 }
 
-function useInitialConcFromDefaults(): Record<string, number | ''> {
-  const initial: Record<string, number | ''> = {}
-  for (const key of Object.keys(STOCKS)) {
-    const ls = localStorage.getItem(`stock.${key}.mgml`)
-    if (ls != null && ls !== '' && !isNaN(Number(ls))) {
-      initial[key] = Number(ls) // use saved override
-    } else {
-      const def = (STOCKS as any)[key]?.defaultMgPerMl
-      initial[key] = typeof def === 'number' ? def : ''
-    }
-  }
-  return initial
-}
-
 export default function SyringeCards() {
   const [tab, setTab] = React.useState<Group>('adult')
 
-  // LocalStorage-backed conc per stock drug, defaulting to STOCKS.defaultMgPerMl
-  const [conc, setConc] = React.useState<Record<string, number | ''>>(() => useInitialConcFromDefaults())
+  // LocalStorage-backed conc per stock drug, default to STOCKS.mgPerMl on first run
+  const [conc, setConc] = React.useState<Record<string, number | ''>>(() => {
+    const initial: Record<string, number | ''> = {}
+    for (const key of Object.keys(STOCKS)) {
+      const ls = localStorage.getItem(`stock.${key}.mgml`)
+      const parsed = ls != null && ls !== '' && !isNaN(Number(ls)) ? Number(ls) : undefined
+      // Use mgPerMl if defined in STOCKS; fall back to '' (user will enter)
+      initial[key] = parsed ?? (STOCKS as any)[key]?.mgPerMl ?? ''
+    }
+    return initial
+  })
 
   const changeConc = (drugKey: string, v: number | '') => {
     setConc(prev => {
@@ -154,13 +146,9 @@ export default function SyringeCards() {
       </div>
 
       <p className="mt-4 text-[12px] leading-snug text-gray-600">
-        For trained anesthesia professionals only. Recipes reflect your provided practice.
-        Enter/confirm stock concentrations to display mg content.
+        For trained anesthesia professionals only. Recipes reflect your provided practice. Enter/confirm stock concentrations to display mg content.
         This app does not replace institutional protocols or clinical judgment.
       </p>
     </section>
   )
 }
-
-// Provide both default and named export to satisfy either import style
-export { SyringeCards }
