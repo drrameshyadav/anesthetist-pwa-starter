@@ -1,6 +1,5 @@
 import React from 'react'
 import { STOCKS, SYRINGES, type Unit, type SyringeDef, type Group } from '../lib/syringes'
-import { defaultStockMgPerMl } from '../lib/defaults'
 
 function useLocalNumber(key: string, initial?: number) {
   const [v, setV] = React.useState<number | ''>(() => {
@@ -47,7 +46,6 @@ function Card({ s, stockMap, onStockChange }: {
             value={stockMap[s.target.drugKey] === '' ? '' : stockMap[s.target.drugKey]}
             onChange={e => onStockChange(s.target!.drugKey, e.target.value === '' ? '' : Number(e.target.value))}
           />
-          {STOCKS[s.target.drugKey].note && <span className="ml-2 text-gray-500">{STOCKS[s.target.drugKey].note}</span>}
         </div>
         <div className="text-sm mt-1">
           {drawMl != null && isFinite(drawMl)
@@ -84,7 +82,6 @@ function Card({ s, stockMap, onStockChange }: {
                   value={stockMap[f.drugKey] === '' ? '' : stockMap[f.drugKey]}
                   onChange={e => onStockChange(f.drugKey, e.target.value === '' ? '' : Number(e.target.value))}
                 />
-                {STOCKS[f.drugKey].note && <span className="ml-2 text-gray-500">{STOCKS[f.drugKey].note}</span>}
               </div>
             </div>
           )
@@ -115,21 +112,16 @@ function Card({ s, stockMap, onStockChange }: {
   )
 }
 
-export function SyringeCards() {
+export default function SyringeCards() {
   const [tab, setTab] = React.useState<Group>('adult')
 
-  // one localStorage-backed concentration per stock drug
+  // LocalStorage-backed conc per stock drug, defaulting to STOCKS.mgPerMl
   const [conc, setConc] = React.useState<Record<string, number | ''>>(() => {
     const initial: Record<string, number | ''> = {}
     for (const key of Object.keys(STOCKS)) {
       const ls = localStorage.getItem(`stock.${key}.mgml`)
-      if (ls != null && ls !== '' && !isNaN(Number(ls))) {
-        initial[key] = Number(ls)
-      } else {
-        const label = STOCKS[key]?.label ?? key
-        const def = defaultStockMgPerMl(key, label) // centralized defaults + safe fallback
-        initial[key] = def === '' ? '' : Number(def)
-      }
+      const parsed = ls != null && ls !== '' && !isNaN(Number(ls)) ? Number(ls) : undefined
+      initial[key] = parsed ?? (STOCKS as any)[key].mgPerMl ?? ''
     }
     return initial
   })
