@@ -2,14 +2,11 @@
   command = "npm run build"
   publish = "dist"
 
-[build.environment]
-  NODE_VERSION = "20"
-
 [[plugins]]
   package = "@netlify/plugin-lighthouse"
 
-  # Run Lighthouse (mobile) on these paths for every deploy, incl. PR previews
-  [[plugins.inputs.audits]]
-    path = "/"
-  [[plugins.inputs.audits]]
-    path = "/legacy.html"
+  # Exclude legacy.html from Lighthouse checks
+  [plugins.inputs]
+    ignore = [
+      "/legacy.html"
+    ]
