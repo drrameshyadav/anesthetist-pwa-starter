@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { AGENTS, type AgentKey } from '../lib/relaxants'
+import { AGENTS, type AgentKey } from '@/lib/relaxants'
 
 type Phase = 'bolus' | 'maintenance'
 

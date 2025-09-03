@@ -1,5 +1,5 @@
 import React from 'react'
-import { DRUGS, type DrugDef } from '../lib/drugs'
+import { DRUGS, type DrugDef } from '@/lib/drugs'
 
 function getStoredWeight(): number {
   const keys = ['patient.weight.kg', 'patientWeightKg', 'patient_kg', 'weightKg']
@@ -34,7 +34,7 @@ export function DrugDoseCards() {
 
   return (
     // Tighter gutters on phones; roomy on large screens
-    <section className="mx-auto px-0 sm:px-2 md:px-2 lg:px-6 max-w-none lg:max-w-3xl">
+    <section className="mx-auto px-2 sm:px-3 md:px-4 lg:px-6 max-w-none lg:max-w-3xl pb-6">
       <h2 className="text-xl font-semibold mb-3">Drug Dose Quick Calculator</h2>
 
       <div className="mb-4 flex items-center gap-3">

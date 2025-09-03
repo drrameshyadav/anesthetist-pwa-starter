@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { storage } from '../lib/storage'
+import { storage } from '@/lib/storage'
 
 type Lap = { t: number, delta: number }
 

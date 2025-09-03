@@ -1,5 +1,5 @@
 import React from 'react'
-import { STOCKS, SYRINGES, type Unit, type SyringeDef, type Group } from '../lib/syringes'
+import { STOCKS, SYRINGES, type Unit, type SyringeDef, type Group } from '@/lib/syringes'
 
 function unitToMg(amount: number, unit: Unit) {
   return unit === 'mcg' ? amount / 1000 : amount
@@ -41,7 +41,10 @@ function Card({ s }: { s: SyringeDef }) {
 
         <div className="text-sm mt-1">
           {drawMl != null && isFinite(drawMl) ? (
-            <>Draw <span className="font-medium">{drawMl.toFixed(2)} mL</span> {STOCKS[s.target.drugKey].label} + add NS to <span className="font-medium">{finalVol} mL</span></>
+            <>
+              Draw <span className="font-medium">{drawMl.toFixed(2)} mL</span> {STOCKS[s.target.drugKey].label} + add NS to{' '}
+              <span className="font-medium">{finalVol} mL</span>
+            </>
           ) : (
             <span className="text-yellow-700">Stock concentration not defined (powder) — reconstitute per vial/amp guidelines</span>
           )}

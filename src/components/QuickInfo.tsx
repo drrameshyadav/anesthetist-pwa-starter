@@ -1,7 +1,7 @@
 import React from 'react'
-import { storage } from '../lib/storage'
-import { derivePatient, type PatientState, round } from '../lib/patient'
-import { fluidRate421, ebvMl, ettSizeByAge, ettDepthByID, lmaSizeByWeight } from '../lib/quick'
+import { storage } from '@/lib/storage'
+import { derivePatient, type PatientState, round } from '@/lib/patient'
+import { fluidRate421, ebvMl, ettSizeByAge, ettDepthByID, lmaSizeByWeight } from '@/lib/quick'
 
 const PATIENT_KEY = 'atk_patient_v136'
 

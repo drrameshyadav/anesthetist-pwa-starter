@@ -1,13 +1,14 @@
 import React from 'react'
 import { Brain, TimerReset, Syringe } from 'lucide-react'
-import Timer from './components/Timer'
-import InstallPrompt from './components/InstallPrompt'
-import LocalAnestheticCalc from './components/LocalAnestheticCalc'
-import PatientCard from './components/PatientCard'
-import RelaxantTimers from './components/RelaxantTimers'
-import QuickInfo from './components/QuickInfo'
-import { DrugDoseCards } from './components/DrugDoseCards'
-import { SyringeCards } from './components/SyringeCards'
+
+import Timer from '@/components/Timer'
+import InstallPrompt from '@/components/InstallPrompt'
+import LocalAnestheticCalc from '@/components/LocalAnestheticCalc'
+import PatientCard from '@/components/PatientCard'
+import RelaxantTimers from '@/components/RelaxantTimers'
+import QuickInfo from '@/components/QuickInfo'
+import { DrugDoseCards } from '@/components/DrugDoseCards'
+import { SyringeCards } from '@/components/SyringeCards'
 
 export default function App() {
   return (

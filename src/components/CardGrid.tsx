@@ -1,6 +1,6 @@
 import * as React from "react";
-import cards from "../data/cards";
-import Card from "./Card";
+import cards from "@/data/cards";
+import Card from "@/components/Card";
 
 export default function CardGrid() {
   return (

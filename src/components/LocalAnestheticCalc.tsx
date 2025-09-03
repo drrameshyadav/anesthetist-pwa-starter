@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { storage } from '../lib/storage'
+import { storage } from '@/lib/storage'
 
 type AgentKey = 'lidocaine' | 'bupivacaine' | 'ropivacaine' | 'prilocaine'
 

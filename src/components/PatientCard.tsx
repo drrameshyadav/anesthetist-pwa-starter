@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { derivePatient, PatientState, round } from '../lib/patient'
-import { storage } from '../lib/storage'
+import { derivePatient, PatientState, round } from '@/lib/patient'
+import { storage } from '@/lib/storage'
 
 const KEY = 'atk_patient_v136'
 
