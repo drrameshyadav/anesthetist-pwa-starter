@@ -33,15 +33,28 @@ export function DrugDoseCards() {
   React.useEffect(() => { localStorage.setItem('patient.weight.kg', String(wtKg)) }, [wtKg])
 
   return (
-    <section className="px-3 pb-6">
+    // Tighter gutters on phones; roomy on large screens
+    <section className="mx-auto px-0 sm:px-2 md:px-2 lg:px-6 max-w-none lg:max-w-3xl">
       <h2 className="text-xl font-semibold mb-3">Drug Dose Quick Calculator</h2>
 
       <div className="mb-4 flex items-center gap-3">
         <label className="text-sm font-medium">Weight (kg)</label>
-        <input type="number" inputMode="decimal" className="w-28 rounded-lg border px-3 py-2"
-               value={wtKg} min={1} step="0.5" onChange={e => setWtKg(Number(e.target.value || 0))}/>
-        <button type="button" className="ml-auto rounded-lg border px-3 py-2 text-sm"
-                onClick={() => (navigator as any)?.vibrate?.(10)} aria-label="Haptic ping" title="Haptic ping">
+        <input
+          type="number"
+          inputMode="decimal"
+          className="w-28 rounded-lg border px-3 py-2"
+          value={wtKg}
+          min={1}
+          step="0.5"
+          onChange={e => setWtKg(Number(e.target.value || 0))}
+        />
+        <button
+          type="button"
+          className="ml-auto rounded-lg border px-3 py-2 text-sm"
+          onClick={() => (navigator as any)?.vibrate?.(10)}
+          aria-label="Haptic ping"
+          title="Haptic ping"
+        >
           Haptic
         </button>
       </div>
@@ -60,8 +73,14 @@ export function DrugDoseCards() {
                 <div className="text-xs text-gray-600">
                   <div className="font-medium">Vial conc</div>
                   <div className="flex items-center gap-1 mt-1">
-                    <input type="number" inputMode="decimal" className="w-20 rounded-lg border px-2 py-1 text-sm"
-                           value={c} step="0.1" onChange={e => setConc(v => ({ ...v, [d.key]: Number(e.target.value || 0) }))}/>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      className="w-20 rounded-lg border px-2 py-1 text-sm"
+                      value={c}
+                      step="0.1"
+                      onChange={e => setConc(v => ({ ...v, [d.key]: Number(e.target.value || 0) }))}
+                    />
                     <span className="text-gray-500">mg/mL</span>
                   </div>
                 </div>
@@ -69,14 +88,18 @@ export function DrugDoseCards() {
 
               <div className="mt-2 text-sm">
                 <div className="text-gray-600">{txt.headline}</div>
-                <div className="mt-1"><span className="font-medium">Dose:</span> {txt.mgStr} &nbsp;(<span className="font-medium">≈</span> {txt.mlStr})</div>
+                <div className="mt-1">
+                  <span className="font-medium">Dose:</span> {txt.mgStr} &nbsp;(<span className="font-medium">≈</span> {txt.mlStr})
+                </div>
                 {d.adultFixedNote && <div className="mt-1 text-xs text-gray-600">💡 {d.adultFixedNote}</div>}
                 {d.notes && <div className="mt-1 text-xs text-gray-600">{d.notes}</div>}
               </div>
 
               <div className="mt-2 flex gap-2">
-                <button className="rounded-lg border px-3 py-2 text-sm"
-                        onClick={() => setConc(v => ({ ...v, [d.key]: d.concDefaultMgPerMl }))}>
+                <button
+                  className="rounded-lg border px-3 py-2 text-sm"
+                  onClick={() => setConc(v => ({ ...v, [d.key]: d.concDefaultMgPerMl }))}
+                >
                   Reset conc
                 </button>
               </div>
